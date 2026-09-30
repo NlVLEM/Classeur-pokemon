@@ -1,0 +1,1165 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mon Classeur Pokémon</title>
+<meta name="theme-color" content="#171A2B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Classeur">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a collector's binder — stats strip on top, tabbed pages, real card scans in pocket grid, detail sheet slides in from the side. */
+:root{
+  --bg:#EEF0F5; --surface:#FFFFFF; --surface-2:#F5F6FA; --line:#D9DCE6;
+  --ink:#171A2B; --ink-2:#555B75; --ink-3:#8A90A8;
+  --accent:#2744C4; --accent-ink:#FFFFFF; --accent-soft:#E3E8FB;
+  --gold:#E9B824; --gold-ink:#3A2C00; --danger:#C0352B; --ok:#2E8B57;
+  --shadow:0 1px 2px rgba(23,26,43,.06),0 4px 14px rgba(23,26,43,.08);
+  --t0:#5FA847;--t1:#E0592F;--t2:#3B8FD9;--t3:#E8B820;--t4:#A55BC4;--t5:#B7703B;--t6:#3F4A5E;--t7:#8E9AAB;--t8:#E26FA6;--t9:#B39530;--t10:#B7B2A4;--tn:#9AA0B4;
+  --display:"Chakra Petch","Arial Narrow",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0F1120; --surface:#181B2E; --surface-2:#1F2338; --line:#2C3150;
+  --ink:#ECEEF7; --ink-2:#A9AFC8; --ink-3:#6F7593;
+  --accent:#7C95FF; --accent-ink:#0F1120; --accent-soft:#232B55;
+  --gold:#F2C94C; --gold-ink:#2B2100; --danger:#FF7A6E; --ok:#5FD093;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
+  color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;margin:0}
+img{max-width:100%}
+.wrap{max-width:1200px;margin:0 auto;padding-inline:max(16px,env(safe-area-inset-left,0px));padding-block:calc(20px + env(safe-area-inset-top,0px)) calc(60px + env(safe-area-inset-bottom,0px))}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;letter-spacing:.01em}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+
+.top{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end;justify-content:space-between;padding-bottom:16px;border-bottom:2px solid var(--ink)}
+.brand{display:flex;gap:12px;align-items:center}
+.ball{width:38px;height:38px;border-radius:50%;border:3px solid var(--ink);background:linear-gradient(var(--danger) 0 44%,var(--ink) 44% 56%,var(--surface) 56%);position:relative;flex:none}
+.ball::after{content:"";position:absolute;inset:11px;border-radius:50%;background:var(--surface);border:3px solid var(--ink)}
+.brand h1{font-size:28px;font-weight:700;line-height:1}
+.brand p{margin:3px 0 0;color:var(--ink-2);font-size:13px}
+.stats{display:flex;flex-wrap:wrap;gap:6px 26px}
+.stat{display:grid;gap:1px}
+.stat b{font-family:var(--display);font-size:24px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:600}
+.status{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-3);margin-top:10px}
+.status .warn{color:var(--danger)}
+.status .okc{color:var(--ok)}
+
+.bar-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:18px 0 16px}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:var(--surface);padding:8px 16px;border-radius:999px;cursor:pointer;font-weight:600;font-size:14px;color:var(--ink-2)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab .c{font-family:var(--mono);font-size:12px;opacity:.7;margin-left:6px}
+.backup{display:flex;gap:6px;flex-wrap:wrap}
+
+.tools{display:grid;grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+@media (max-width:760px){.tools{grid-template-columns:1fr 1fr}.tools .q{grid-column:1/-1}}
+.field{display:grid;gap:4px;min-width:0;align-content:start}
+.field label,.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:600}
+input[type=search],input[type=number],input[type=text],select{width:100%;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:15px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;color:var(--ink-2);font-size:13px;margin:6px 0 14px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:13px;cursor:pointer;color:var(--ink-2)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.check{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink-2);cursor:pointer}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px 14px}
+@media (max-width:440px){.grid{grid-template-columns:1fr 1fr;gap:12px 10px}}
+.slot{position:relative;text-align:left;border:0;padding:0;background:none;cursor:pointer;display:grid;gap:6px;min-width:0}
+.pocket{position:relative;aspect-ratio:63/88;max-width:100%;border-radius:9px;background:var(--surface-2);box-shadow:var(--shadow);transition:transform .15s ease}
+.slot:hover .pocket{transform:translateY(-3px)}
+.pocket img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:9px;display:block}
+.ph{position:absolute;inset:0;border-radius:9px;border:6px solid var(--tc,var(--tn));background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+.ph .n{padding:7px 8px 4px;font-weight:700;font-size:13px;line-height:1.15}
+.ph .a{margin:0 8px 8px;flex:1;border-radius:4px;display:grid;place-items:center;text-align:center;padding:6px;font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in srgb,var(--tc,var(--tn)) 70%,var(--ink));background:linear-gradient(160deg,color-mix(in srgb,var(--tc,var(--tn)) 28%,var(--surface-2)),var(--surface-2))}
+.pocket .en{position:absolute;left:6px;bottom:6px;font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.65);color:#fff;padding:1px 5px;border-radius:4px}
+.cap{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--ink-2);min-width:0;padding-inline:2px}
+.cap .s{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cap .no{font-family:var(--mono);color:var(--ink);flex:none}
+.cap2{display:flex;justify-content:space-between;gap:6px;font-size:11.5px;color:var(--ink-3);padding-inline:2px;min-width:0}
+.cap2 .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;color:var(--ink)}
+.cap2 .px{font-variant-numeric:tabular-nums;flex:none}
+.owned .pocket{box-shadow:0 0 0 3px var(--gold),var(--shadow)}
+.badge{position:absolute;top:-8px;right:-8px;z-index:2;background:var(--gold);color:var(--gold-ink);font-family:var(--display);font-weight:700;font-size:13px;min-width:26px;height:26px;padding:0 7px;border-radius:999px;display:grid;place-items:center;box-shadow:var(--shadow)}
+.more{display:flex;justify-content:center;margin-top:18px}
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 16px;border-radius:10px;cursor:pointer;font-weight:600}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--danger)}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.empty{padding:40px 20px;text-align:center;color:var(--ink-2);border:2px dashed var(--line);border-radius:14px;display:grid;gap:10px;justify-items:center}
+.empty h3{font-size:19px;color:var(--ink)}
+.banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:14px}
+
+.list{display:grid;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 14px 9px 10px;border-top:1px solid var(--line);cursor:pointer}
+.item:first-child{border-top:0}
+.item:hover{background:var(--surface-2)}
+.thumb{width:46px;aspect-ratio:63/88;border-radius:4px;background:var(--surface-2);overflow:hidden;position:relative;border-left:4px solid var(--tc,var(--tn))}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.item .t{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .s{font-size:13px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.pill{font-size:11px;font-weight:600;padding:1px 7px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);white-space:nowrap}
+.pill.loc{background:var(--accent-soft);border-color:transparent;color:var(--ink)}
+.item .v{text-align:right;font-variant-numeric:tabular-nums}
+.item .v b{display:block;font-family:var(--display);font-size:16px}
+.item .v span{font-size:12px;color:var(--ink-3)}
+.grouph{font-family:var(--display);font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);padding:14px 14px 6px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;background:var(--surface-2)}
+.grouph:first-child{border-top:0}
+
+.sets{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+@media (max-width:440px){.sets{grid-template-columns:1fr}}
+.setrow{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px;display:grid;gap:8px;cursor:pointer;text-align:left}
+.setrow:hover{border-color:var(--accent)}
+.setrow .h{display:flex;justify-content:space-between;gap:10px;align-items:baseline;min-width:0}
+.setrow .h b{font-family:var(--display);font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.setrow .h span{font-family:var(--mono);font-size:12px;color:var(--ink-2);flex:none}
+.setrow .sub{font-size:12px;color:var(--ink-3);display:flex;justify-content:space-between;gap:8px}
+.bar{height:8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold);border-radius:99px}
+.sethead{font-family:var(--display);font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin:20px 0 4px;grid-column:1/-1}
+
+.scrim{position:fixed;inset:0;background:rgba(10,12,25,.5);z-index:20}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(470px,100%);background:var(--surface);z-index:21;box-shadow:-10px 0 30px rgba(0,0,0,.25);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet-h{padding:16px 20px 12px;border-bottom:1px solid var(--line);display:grid;gap:3px;position:relative}
+.sheet-h h2{font-size:24px;padding-right:40px}
+.sheet-h .sub{color:var(--ink-2);font-size:14px}
+.x{position:absolute;top:13px;right:14px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);cursor:pointer;font-size:18px;line-height:1}
+.sheet-b{padding:16px 20px 28px;overflow:auto;display:grid;gap:18px;align-content:start}
+.hero{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:400px){.hero{grid-template-columns:minmax(0,130px) minmax(0,1fr)}}
+.hero .pocket{box-shadow:var(--shadow)}
+.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;font-size:13.5px;margin:0}
+.facts dt{color:var(--ink-3)}
+.facts dd{margin:0;font-weight:500;min-width:0;overflow-wrap:anywhere}
+.price{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px}
+.price .hd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.price h3{font-size:16px}
+.ptable{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.ptable th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600;text-align:right;padding:3px 0}
+.ptable th:first-child,.ptable td:first-child{text-align:left}
+.ptable td{text-align:right;padding:4px 0;border-top:1px solid var(--line)}
+.ptable tr.ref td{font-weight:700}
+.ptable td:first-child{color:var(--ink-2)}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:14px}
+.form h3{grid-column:1/-1;font-size:16px}
+.form .full{grid-column:1/-1}
+.seg{display:flex;flex-wrap:wrap;gap:5px}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 9px;font-size:13px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;width:max-content}
+.stepper button{width:38px;height:38px;border:0;background:none;cursor:pointer;font-size:18px}
+.stepper output{min-width:34px;text-align:center;font-family:var(--display);font-weight:700;font-size:17px}
+.entries{display:grid;gap:8px}
+.entry{display:flex;justify-content:space-between;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:14px}
+.entry .l{display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-width:0}
+.entry .acts{display:flex;gap:6px;flex:none}
+.note{font-size:12.5px;color:var(--ink-3);margin:0}
+.link{color:var(--accent);font-weight:600;text-decoration:none}
+.link:hover{text-decoration:underline}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:30;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.scan-setup{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr);gap:10px 12px;margin-bottom:12px}
+.scan-setup .field:nth-child(4){grid-column:1/2}.scan-setup .field:nth-child(5){grid-column:2/4}
+@media (max-width:760px){.scan-setup{grid-template-columns:1fr 1fr}.scan-setup .sc-set{grid-column:1/-1}.scan-setup .field:nth-child(4),.scan-setup .field:nth-child(5){grid-column:1/-1}}
+.quickbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr) minmax(0,220px);gap:12px;align-items:center;padding-block:10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+@media (max-width:760px){.quickbar{grid-template-columns:1fr 1fr}.quickbar .last{grid-column:1/-1;order:3}}
+.qnum input{font-family:var(--mono);font-size:17px;border:2px solid var(--accent)}
+.last{display:flex;gap:10px;align-items:center;min-width:0;min-height:52px}
+.last .thumb{width:36px;flex:none}
+.last .txt{min-width:0;display:grid;font-size:13.5px}
+.last .txt b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.last.err{color:var(--danger)}
+.prog{display:grid;gap:5px}
+.prog-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.prog-h b{font-family:var(--display);font-size:20px}
+.sgrid{grid-template-columns:repeat(auto-fill,minmax(122px,1fr));gap:12px 10px}
+.stile{display:grid;gap:5px;min-width:0;position:relative}
+.stile .add{border:0;padding:0;background:none;cursor:pointer;display:block;width:100%;border-radius:9px}
+.stile .pocket{transition:transform .12s ease}
+.stile .add:active .pocket{transform:scale(.96)}
+.stile:not(.owned) .pocket{opacity:.5;filter:grayscale(.9)}
+.stile:not(.owned) .add:hover .pocket{opacity:.85;filter:none}
+@media (max-width:440px){.sgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px}.stile .ph .a small{display:none!important}}
+.stile.owned .pocket{box-shadow:0 0 0 3px var(--gold),var(--shadow)}
+.stile.flash .pocket{animation:flash .5s ease}
+@keyframes flash{0%{box-shadow:0 0 0 6px var(--accent)}100%{box-shadow:0 0 0 3px var(--gold)}}
+.scap{display:flex;align-items:center;justify-content:space-between;gap:4px;min-width:0;font-size:12px}
+.scap .no{font-family:var(--mono);color:var(--ink)}
+.scap .vc{display:flex;gap:3px;flex-wrap:wrap}
+.scap .vc span{font-size:10.5px;font-weight:700;padding:0 5px;border-radius:5px;background:var(--gold);color:var(--gold-ink)}
+.minus{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:16px;line-height:1;flex:none}
+.qrow{display:flex;gap:6px}.qrow input{min-width:0;flex:1}.qrow .btn{flex:none}
+.slot:not(.owned) .pocket{filter:grayscale(1);opacity:.5;transition:filter .15s ease,opacity .15s ease,transform .15s ease}
+.slot:not(.owned):hover .pocket,.slot:not(.owned):focus-visible .pocket{filter:none;opacity:1}
+/* camera overlay: deliberately always dark, like a viewfinder */
+.cam{position:fixed;inset:0;z-index:40;background:#000;color:#fff;overflow:hidden}
+.cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cam-guide{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);height:min(62vh,calc((100vw - 40px)*88/63));aspect-ratio:63/88;max-width:calc(100vw - 40px);border:2px dashed rgba(255,255,255,.7);border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
+.cam-ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.cam-tr{display:flex;gap:8px}
+.cam-diag{position:absolute;right:12px;top:calc(58px + env(safe-area-inset-top,0px));width:min(330px,calc(100vw - 24px));background:rgba(12,14,28,.9);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px;display:grid;gap:8px;font-size:12px}
+.dg-row{display:flex;gap:10px;align-items:flex-start}
+.dg-flat canvas{width:72px;height:auto;border-radius:4px;display:block;border:1px solid rgba(255,255,255,.3)}
+.dg-top{display:flex;gap:6px;flex:1;min-width:0}
+.dg-c{display:grid;gap:2px;justify-items:center;min-width:0;flex:1}
+.dg-c .thumb{width:100%;max-width:60px}
+.dg-c span{font-family:var(--mono);font-size:11px}.dg-c b{font-size:12px;color:#FFD646}
+.dg-stats{color:#c8cce0;line-height:1.35}
+.cam-top{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px}
+.cam-set{font:600 14px/1.2 var(--display);text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cam-btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;padding:7px 14px;font-weight:600;cursor:pointer}
+.cam-btn[aria-pressed="true"]{background:#FFD646;color:#1a1400;border-color:#FFD646}
+.cam-bottom{position:absolute;left:0;right:0;bottom:0;display:grid;gap:8px;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,rgba(0,0,0,.85) 30%)}
+.cam-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.cam .seg button{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.35);color:#fff}
+.cam .seg button[aria-pressed="true"]{background:#fff;color:#111;border-color:#fff}
+.cam-auto{display:flex;gap:6px;align-items:center;font-size:13px}
+.cam-opts{display:flex;gap:12px;flex-wrap:wrap}
+.cam-choice .txt{gap:6px}.cam-choice .chips .btn{font-family:var(--mono);font-size:12px}
+.cam-status{font-size:14px;font-weight:600;min-height:20px;text-align:center}
+.cam-status.busy{color:#9fc1ff}.cam-status.ok{color:#7be3a6}.cam-status.warn{color:#FFD646}
+.cam-card{display:flex;gap:10px;align-items:center;background:rgba(20,22,40,.92);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:8px 10px}
+.cam-card .thumb{width:42px;flex:none}
+.cam-card .txt{display:grid;min-width:0;font-size:13px;flex:1}
+.cam-card .txt b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cam-card .acts{display:flex;gap:6px;flex:none}
+.cam-card .btn{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3)}
+.cam-card .btn.primary{background:#FFD646;color:#1a1400;border-color:#FFD646}
+.cam-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 32px));background:#15182b;border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:18px;text-align:center;display:grid;gap:10px}
+.cam-msg p{margin:0;color:#c8cce0;font-size:14px}
+.cam-msg .btn{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3)}.cam-msg .btn.primary{background:#FFD646;color:#1a1400;border-color:#FFD646}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="brand"><div class="ball" aria-hidden="true"></div>
+        <div><h1>Mon Classeur Pokémon</h1><p id="catinfo">Chargement du catalogue…</p></div></div>
+      <div class="status"><span id="netinfo">Connexion à TCGdex…</span><span id="priceinfo"></span><span id="backupinfo"></span></div>
+    </div>
+    <div class="stats" aria-label="Résumé de la collection">
+      <div class="stat"><b id="sTotal">0</b><span>Cartes</span></div>
+      <div class="stat"><b id="sUnique">0</b><span>Différentes</span></div>
+      <div class="stat"><b id="sValue">0 €</b><span>Valeur estimée</span></div>
+      <div class="stat"><b id="sSets">0</b><span>Séries entamées</span></div>
+    </div>
+  </header>
+
+  <div class="bar-top">
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-view="cat">Catalogue</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="col">Ma collection<span class="c" id="cCol">0</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-view="scan">Mode scan</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="set">Séries</button>
+    </nav>
+    <div class="backup">
+      <button class="btn small" id="bkSave">Sauvegarder</button>
+      <button class="btn small" id="bkLoad">Restaurer</button>
+      <button class="btn small" id="bkCsv">Export tableur</button>
+      <input type="file" id="bkFile" accept="application/json,.json" hidden>
+    </div>
+  </div>
+  <div id="restoreBanner"></div>
+
+  <section id="view-cat">
+    <div class="tools">
+      <div class="field q"><label for="q">Rechercher</label><input type="search" id="q" value="Dracaufeu" placeholder="Nom, numéro 4/102, série…" autocomplete="off"></div>
+      <div class="field"><label for="fSet">Série</label><select id="fSet"><option value="">Toutes les séries</option></select></div>
+      <div class="field"><label for="fType">Type</label><select id="fType"><option value="">Tous</option></select></div>
+      <div class="field"><label for="fSort">Trier par</label><select id="fSort"><option value="date">Plus récentes</option><option value="old">Plus anciennes</option><option value="num">Numéro</option></select></div>
+    </div>
+    <div class="meta">
+      <span id="resCount" class="num"></span>
+      <div class="chips">
+        <button class="chip" aria-pressed="true" data-own="">Toutes</button>
+        <button class="chip" aria-pressed="false" data-own="own">Possédées</button>
+        <button class="chip" aria-pressed="false" data-own="miss">Manquantes</button>
+      </div>
+    </div>
+    <div id="grid" class="grid"></div>
+    <div class="more"><button class="btn" id="moreBtn" hidden>Afficher plus</button></div>
+  </section>
+
+  <section id="view-col" hidden>
+    <div class="tools">
+      <div class="field q"><label for="cq">Filtrer ma collection</label><input type="search" id="cq" placeholder="Nom, série, rangement…" autocomplete="off"></div>
+      <div class="field"><label for="cBox">Rangement</label><select id="cBox"></select></div>
+      <div class="field"><label for="cSort">Trier par</label><select id="cSort"><option value="added">Ajout récent</option><option value="value">Valeur</option><option value="name">Nom</option><option value="set">Série</option><option value="box">Rangement</option></select></div>
+      <div class="field"><label for="pRef">Prix de référence</label><select id="pRef"><option value="avg30">Moyenne des ventes 30 j</option><option value="avg7">Moyenne des ventes 7 j</option><option value="trend">Tendance</option><option value="low">Prix le plus bas</option></select></div>
+    </div>
+    <div class="meta">
+      <span id="colCount" class="num"></span>
+      <label class="check"><input type="checkbox" id="pCond" checked> Ajuster la valeur selon l’état</label>
+    </div>
+    <div id="colList"></div>
+  </section>
+
+  <section id="view-scan" hidden>
+    <div class="scan-setup">
+      <div class="field sc-set"><label for="scSet">Série affichée</label><select id="scSet"></select><span class="note">La caméra reconnaît toutes les séries et affiche celle de la carte</span></div>
+      <div class="field"><label for="scBox">Rangement</label><input type="text" id="scBox" list="boxList" placeholder="Classeur bleu" autocomplete="off"></div>
+      <div class="field"><label for="scSpot">Emplacement</label><input type="text" id="scSpot" placeholder="Page 1" autocomplete="off"></div>
+      <div class="field"><span class="lbl">Variante ajoutée</span><div class="seg" id="scVar"></div></div>
+      <div class="field"><span class="lbl">État</span><div class="seg" id="scCond"></div></div>
+    </div>
+    <div class="quickbar">
+      <div class="field qnum"><label for="scNum">Numéro de la carte, puis Entrée</label><div class="qrow"><input type="text" id="scNum" placeholder="36 · 36r · TG05" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"><button class="btn primary" type="button" id="scCam">Caméra</button></div></div>
+      <div class="last" id="scLast"><span class="note">Tape un numéro ou touche une carte pour l’ajouter. Le bouton − retire un exemplaire.</span></div>
+      <div class="prog"><div class="prog-h"><b id="scHave" class="num">0/0</b><span id="scRev" class="note"></span></div><div class="bar"><i id="scBar" style="width:0"></i></div></div>
+    </div>
+    <div class="meta">
+      <span id="scCount" class="num"></span>
+      <div class="chips">
+        <button class="chip" aria-pressed="true" data-sown="">Toutes</button>
+        <button class="chip" aria-pressed="false" data-sown="miss">Manquantes</button>
+        <button class="chip" aria-pressed="false" data-sown="own">Possédées</button>
+      </div>
+    </div>
+    <div id="scGrid" class="grid sgrid"></div>
+  </section>
+
+  <section id="view-set" hidden>
+    <div class="meta">
+      <span id="setCount"></span>
+      <div class="chips">
+        <button class="chip" id="sStarted" aria-pressed="true">Entamées</button>
+        <button class="chip" id="sAllSets" aria-pressed="false">Toutes</button>
+      </div>
+    </div>
+    <div id="setList" class="sets"></div>
+  </section>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" hidden aria-modal="true" role="dialog" aria-labelledby="shName">
+  <div class="sheet-h"><h2 id="shName"></h2><div class="sub" id="shSub"></div><button class="x" id="shClose" aria-label="Fermer">×</button></div>
+  <div class="sheet-b" id="shBody"></div>
+</aside>
+<div class="cam" id="cam" hidden role="dialog" aria-label="Scanner avec la caméra">
+  <video id="camVideo" playsinline muted autoplay></video>
+  <div class="cam-guide" id="camGuide"></div>
+  <canvas class="cam-ov" id="camOverlay"></canvas>
+  <div class="cam-top"><button class="cam-btn" type="button" id="camClose">Fermer</button><span id="camSet" class="cam-set"></span><span class="cam-tr"><button class="cam-btn" type="button" id="camTorch" aria-pressed="false" hidden>Lampe</button><button class="cam-btn" type="button" id="camDiagBtn" aria-pressed="false">Diagnostic</button></span></div>
+  <div class="cam-diag" id="camDiag" hidden><div class="dg-row"><div class="dg-flat" title="Carte redressée vue par l’app"></div><div class="dg-top"></div></div><div class="dg-stats"></div></div>
+  <div class="cam-bottom">
+    <div class="cam-row"><div class="seg" id="camVar"></div><div class="cam-opts"><label class="cam-auto"><input type="checkbox" id="camDup"> Prévenir si déjà possédée</label><label class="cam-auto"><input type="checkbox" id="camAuto"> Ajout auto</label></div></div>
+    <div class="cam-status" id="camStatus"></div>
+    <div id="camResult"></div>
+  </div>
+  <div class="cam-msg" id="camMsg" hidden></div>
+  <input type="file" id="camPhoto" accept="image/*" capture="environment" hidden>
+</div>
+<datalist id="boxList"></datalist>
+<div class="toast" id="toast" hidden></div>
+
+<script type="application/json" id="catalog">/*CATALOG*/</script>
+<script>
+(() => {
+const API = 'https://api.tcgdex.net/v2/fr';
+const ASSETS = 'https://assets.tcgdex.net';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const eur = n => n==null||!isFinite(n) ? '—' : n.toLocaleString('fr-FR',{style:'currency',currency:'EUR',minimumFractionDigits:n>=1000?0:2,maximumFractionDigits:2});
+const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const DAY = 864e5;
+
+const TYPE_FR = ['Plante','Feu','Eau','Électrique','Psy','Combat','Obscurité','Métal','Fée','Dragon','Incolore'];
+const CAT_FR = {p:'Pokémon',t:'Dresseur',e:'Énergie'};
+const RAR_FR = {'Common':'Commune','Uncommon':'Peu commune','Rare':'Rare','Holo Rare':'Rare holo','Rare Holo':'Rare holo','Ultra Rare':'Ultra rare','Secret Rare':'Rare secrète','Promo':'Promo','None':'—','Double rare':'Double rare','Illustration rare':'Illustration rare','Special illustration rare':'Illustration spéciale rare','Hyper rare':'Hyper rare','Shiny rare':'Chromatique rare','Shiny Ultra Rare':'Chromatique ultra rare','ACE SPEC Rare':'High-Tech rare','Holo Rare V':'Rare holo V','Holo Rare VMAX':'Rare holo VMAX','Holo Rare VSTAR':'Rare holo VSTAR','Radiant Rare':'Radieux','Amazing Rare':'Rare magnifique','Full Art Trainer':'Dresseur full art','Rare Holo LV.X':'Rare holo NIV.X','Rare PRIME':'Rare PRIME','LEGEND':'LÉGENDE','Classic Collection':'Collection classique','Shiny rare V':'Chromatique rare V','Shiny rare VMAX':'Chromatique rare VMAX','Mega Hyper Rare':'Méga hyper rare','Black White Rare':'Rare Noir & Blanc'};
+const VAR_FR = {n:'Normale',r:'Reverse',h:'Holo','1':'1ʳᵉ édition',p:'Promo W',l:'Lenticulaire',m:'Métal'};
+const COND = [['MT','Mint',1],['NM','Near Mint',1],['EX','Excellent',.85],['GD','Good',.7],['LP','Light Played',.6],['PL','Played',.45],['PO','Poor',.25]];
+const COEF = Object.fromEntries(COND.map(c=>[c[0],c[2]]));
+const REF_FR = {avg30:'moyenne 30 j',avg7:'moyenne 7 j',trend:'tendance',low:'plus bas'};
+
+/* ---------- local storage ---------- */
+const LS = {
+  get(k,d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); return true; }catch(e){ return false; } }
+};
+const K = {entries:'classeur-fr-v1', prices:'classeur-fr-prices', sets:'classeur-fr-extra-sets', cfg:'classeur-fr-settings', backup:'classeur-fr-lastbackup'};
+let entries = new Map(Object.entries(LS.get(K.entries,{})));
+let prices = LS.get(K.prices,{});           // cardId -> {t, cm}
+let cfg = Object.assign({ref:'avg30', cond:true}, LS.get(K.cfg,{}));
+let storageOk = LS.set('classeur-fr-probe', 1);
+function saveEntries(){ if(!LS.set(K.entries, Object.fromEntries(entries))) toast('Enregistrement impossible : le stockage du navigateur est plein ou bloqué'); }
+function savePrices(){
+  const ids = Object.keys(prices);
+  if (ids.length > 4000){ // keep owned cards + most recent
+    const owned = new Set([...entries.values()].map(e=>e.card));
+    ids.filter(id=>!owned.has(id)).sort((a,b)=>prices[a].t-prices[b].t).slice(0, ids.length-3500).forEach(id=>delete prices[id]);
+  }
+  LS.set(K.prices, prices);
+}
+
+/* ---------- catalog ---------- */
+const CAT = JSON.parse(document.getElementById('catalog').textContent);
+let sets = CAT.sets.map((s,i)=>Object.assign(s,{i}));
+let cards = [], byId = new Map(), setById = new Map(sets.map(s=>[s.id,s]));
+function natKey(id){ const m=String(id).match(/^(\D*)(\d+)(.*)$/); return m?[m[1],+m[2],m[3]]:[String(id),0,'']; }
+function cmpId(a,b){ const x=natKey(a),y=natKey(b); return x[0].localeCompare(y[0])||x[1]-y[1]||x[2].localeCompare(y[2]); }
+function addCard(o){ o.hay = norm([o.name,o.en,o.set.name,o.set.en,o.set.code,o.set.oc].filter(Boolean).join(' ')) + ' ' + norm(o.lid+'/'+o.set.total) + ' #' + norm(o.lid); cards.push(o); byId.set(o.id,o); }
+for (const c of CAT.cards){
+  const s = sets[c[0]];
+  addCard({id:s.id+'-'+c[1], set:s, lid:c[1], name:c[2], en:c[3]||'', rar:CAT.rarities[c[4]], type:c[5], cat:c[6], vars:c[7].split(''), img:null});
+}
+const nSetsAtStart = sets.length;
+function fillFilters(){
+  const fType=$('#fType');
+  if (fType.options.length<2){
+    TYPE_FR.forEach((t,i)=>fType.insertAdjacentHTML('beforeend',`<option value="${i}">${t}</option>`));
+    fType.insertAdjacentHTML('beforeend','<option value="t">Dresseur</option><option value="e">Énergie</option>');
+  }
+  const sel=$('#fSet'), cur=sel.value, groups=new Map();
+  [...sets].sort((a,b)=>b.date.localeCompare(a.date)).forEach(s=>{ if(!groups.has(s.serie)) groups.set(s.serie,[]); groups.get(s.serie).push(s); });
+  let html='<option value="">Toutes les séries</option>';
+  for (const [g,list] of groups) html += `<optgroup label="${esc(g)}">`+list.map(s=>`<option value="${s.i}">${esc(s.name)}${s.date?' ('+s.date.slice(0,4)+')':''}</option>`).join('')+'</optgroup>';
+  sel.innerHTML=html; if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+  const ss=$('#scSet'); if(ss){ ss.innerHTML=html.replace('<option value="">Toutes les séries</option>',''); const s=scanSet&&scanSet(); if(s) ss.value=String(s.i); }
+}
+function updateCatInfo(){ $('#catinfo').textContent = `${cards.length.toLocaleString('fr-FR')} cartes françaises · ${sets.length} séries · du Set de Base à aujourd’hui${CAT.built?' · catalogue du '+new Date(CAT.built).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}):''}`; }
+
+/* ---------- live data from TCGdex ---------- */
+let online = false;
+async function syncLive(){
+  const info=$('#netinfo');
+  try{
+    const r = await fetch(API+'/cards'); if(!r.ok) throw new Error(r.status);
+    const list = await r.json();
+    online = true;
+    const unknown = new Map();
+    for (const b of list){
+      const c = byId.get(b.id);
+      if (c){ c.img = b.image||null; c.noFr = !b.image; continue; }
+      const sid = b.id.slice(0, b.id.length - String(b.localId).length - 1);
+      if (!unknown.has(sid)) unknown.set(sid, []);
+      unknown.get(sid).push(b);
+    }
+    // cards of sets not in the bundled catalog (new releases, promos)
+    const extra = LS.get(K.sets,{});
+    const need = [...unknown.keys()].filter(id=>!setById.has(id) && !extra[id]);
+    await pool(need, 4, async id=>{
+      try{ const s = await fetch(API+'/sets/'+encodeURIComponent(id)).then(r=>r.json());
+        extra[id] = {name:s.name, date:s.releaseDate||'', serie:(s.serie&&s.serie.name)||'Autres', s:(s.serie&&s.serie.id)||'', total:(s.cardCount&&s.cardCount.official)||0, code:s.abbreviation&&s.abbreviation.official||''};
+      }catch(e){}
+    });
+    LS.set(K.sets, extra);
+    let added=0;
+    for (const [sid, bl] of unknown){
+      let s = setById.get(sid);
+      if (!s){ const m = extra[sid] || {name:sid, date:'', serie:'Autres', s:'', total:0, code:''};
+        s = Object.assign({id:sid, en:'', n:0, i:sets.length}, m); sets.push(s); setById.set(sid,s); }
+      for (const b of bl){ addCard({id:b.id, set:s, lid:String(b.localId), name:b.name, en:'', rar:'None', type:-1, cat:'p', vars:['n','r'], img:b.image||null, noFr:!b.image, live:true}); s.n++; added++; }
+    }
+    info.innerHTML = `<span class="okc">Images et prix en direct (TCGdex)</span>`;
+    if (added) fillFilters();
+    updateCatInfo();
+    render(); if(openId) renderSheet();
+    refreshOwnedPrices();
+  }catch(e){
+    info.innerHTML = `<span class="warn">TCGdex injoignable : prix indisponibles.</span>`;
+    if (navigator.onLine===false) $('#restoreBanner').innerHTML = `<div class="banner"><span><b>Hors ligne.</b> Ta collection et le catalogue restent consultables. Les scans des cartes et les prix reviendront avec la connexion.</span></div>`;
+    else $('#restoreBanner').innerHTML = `<div class="banner"><span><b>Pas d’accès à internet depuis cette fenêtre.</b> Si tu l’as ouverte dans l’aperçu de l’app Claude, télécharge le fichier puis ouvre-le d’un double-clic dans Chrome ou Edge : l’aperçu bloque internet, donc les scans et les prix. Sinon, vérifie ta connexion et recharge la page.</span></div>`;
+  }
+}
+async function pool(items, n, fn){ const q=[...items]; await Promise.all(Array.from({length:Math.min(n,q.length)},async()=>{ while(q.length) await fn(q.shift()); })); }
+
+function imgUrl(c, lang){ // FR scan (known from TCGdex, or built from the set path), then EN scan
+  if (lang==='fr'){ if (c.img) return c.img; if (c.noFr || !c.set.s) return null; return `${ASSETS}/fr/${c.set.s}/${c.set.id}/${encodeURIComponent(c.lid)}`; }
+  if (lang==='en' && c.set.s) return `${ASSETS}/en/${c.set.s}/${c.set.id}/${encodeURIComponent(c.lid)}`;
+  return null;
+}
+function pocket(c, size){
+  const fr = imgUrl(c,'fr'), en = imgUrl(c,'en');
+  const src = fr || en;
+  const ph = `<div class="ph" style="--tc:${tc(c)}"><div class="n">${esc(c.name)}</div><div class="a">${c.type>=0?TYPE_FR[c.type]:CAT_FR[c.cat]}<small style="display:block;font-family:var(--body);font-size:10.5px;letter-spacing:0;text-transform:none;font-weight:500;opacity:.8;margin-top:4px">Scan pas encore disponible</small></div></div>`;
+  if (!src) return ph;
+  return ph + `<img loading="lazy" alt="" src="${esc(src)}/${size}.webp" ${fr?`data-en="${esc(en||'')}"`:'data-last="1"'} data-size="${size}">${fr?'':'<span class="en">image EN</span>'}`;
+}
+function thumbImg(c){ const fr=imgUrl(c,'fr'), en=imgUrl(c,'en'), src=fr||en; return src?`<img loading="lazy" alt="" src="${esc(src)}/low.webp" ${fr&&en?`data-en="${esc(en)}"`:''} data-size="low">`:''; }
+// image fallback: FR scan -> EN scan -> placeholder
+document.addEventListener('error', e=>{
+  const img = e.target; if (img.tagName!=='IMG' || !img.closest('.pocket,.thumb')) return;
+  if (img.dataset.en){ const en=img.dataset.en; img.removeAttribute('data-en'); img.dataset.last='1'; img.src=en+'/'+img.dataset.size+'.webp'; if(img.closest('.pocket')) img.insertAdjacentHTML('afterend','<span class="en">image EN</span>'); }
+  else { img.nextElementSibling?.classList.contains('en') && img.nextElementSibling.remove(); img.remove(); }
+}, true);
+
+/* ---------- prices ---------- */
+const inflight = new Map();
+function fetchPrice(id, force){
+  const p = prices[id];
+  if (!force && p && Date.now()-p.t < DAY) return Promise.resolve(p);
+  if (inflight.has(id)) return inflight.get(id);
+  const pr = fetch(API+'/cards/'+encodeURIComponent(id)).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{
+    const cm = j.pricing && j.pricing.cardmarket || null;
+    const vp = {};
+    for (const d of (j.variants_detailed||[])){ const ty=String(d.type||'').toLowerCase(), k=/first|1st|premi/.test(ty)?'1':ty.startsWith('rev')?'r':ty.startsWith('holo')?'h':ty.startsWith('normal')?'n':null; const pid=d.thirdParty&&d.thirdParty.cardmarket || d.pricing&&d.pricing.cardmarket&&d.pricing.cardmarket.idProduct; if(k&&pid&&!vp[k]) vp[k]=pid; }
+    prices[id] = {t:Date.now(), cm, vp, upd: cm&&cm.updated||null};
+    const c = byId.get(id);
+    if (c && c.live){ // enrich cards not in the bundled catalog
+      if (j.rarity) c.rar = j.rarity;
+      if (j.category) c.cat = j.category==='Dresseur'||j.category==='Trainer'?'t':j.category==='Énergie'||j.category==='Energy'?'e':'p';
+      if (j.variants){ const v=[]; if(j.variants.normal)v.push('n'); if(j.variants.reverse)v.push('r'); if(j.variants.holo)v.push('h'); if(j.variants.firstEdition)v.push('1'); if(v.length)c.vars=v; }
+    }
+    savePrices(); return prices[id];
+  }).finally(()=>inflight.delete(id));
+  inflight.set(id, pr); return pr;
+}
+function pick(cm, suffix){
+  if (!cm) return null;
+  const order = [cfg.ref, 'avg30', 'avg7', 'trend', 'avg', 'low'];
+  for (const k of order){ const v = cm[k+suffix]; if (v!=null && v>0) return v; }
+  return null;
+}
+function marketPrice(cardId, variant){
+  const p = prices[cardId]; if (!p || !p.cm) return null;
+  if (variant==='r'){ const v = pick(p.cm,'-holo'); if (v!=null) return v; }
+  return pick(p.cm,'');
+}
+function unitValue(e){
+  if (e.price!=null && e.price!=='') return {v:+e.price, src:'manuel'};
+  const m = marketPrice(e.card, e.variant);
+  if (m==null) return {v:null, src:prices[e.card]?'pas de vente':'en attente'};
+  return {v: m*(cfg.cond ? (COEF[e.cond]??1) : 1), src:'auto'};
+}
+async function refreshOwnedPrices(force){
+  if (!online) return;
+  const ids = [...new Set([...entries.values()].map(e=>e.card))].filter(id=>force || !prices[id] || Date.now()-prices[id].t>=DAY);
+  const info=$('#priceinfo');
+  if (!ids.length){ showPriceStatus(); return; }
+  let done=0; info.textContent = `Mise à jour des prix… 0/${ids.length}`;
+  await pool(ids, 4, async id=>{ try{ await fetchPrice(id, force); }catch(e){} done++; info.textContent=`Mise à jour des prix… ${done}/${ids.length}`; if(done%10===0) recompute(); });
+  recompute(); showPriceStatus();
+}
+function showPriceStatus(){
+  const ts = [...entries.values()].map(e=>prices[e.card]?.upd).filter(Boolean).sort();
+  const last = ts[ts.length-1];
+  $('#priceinfo').innerHTML = last ? `Prix Cardmarket du ${new Date(last).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} · <button class="btn small" id="pRefresh" style="padding:1px 8px;font-size:12px">Actualiser</button>` : '';
+  const b=$('#pRefresh'); if(b) b.onclick=()=>refreshOwnedPrices(true);
+}
+
+/* ---------- derived ---------- */
+let ownedById = new Map(), varsById = new Map();
+function recompute(skipRender){
+  ownedById = new Map(); varsById = new Map(); let total=0, value=0; const st=new Set();
+  for (const e of entries.values()){
+    const q=+e.qty||0; total+=q; const u=unitValue(e).v; if(u!=null) value+=q*u;
+    ownedById.set(e.card,(ownedById.get(e.card)||0)+q);
+    const vm=varsById.get(e.card)||{}; vm[e.variant]=(vm[e.variant]||0)+q; varsById.set(e.card,vm);
+    const c=byId.get(e.card); if(c) st.add(c.set.id);
+  }
+  $('#sTotal').textContent=total.toLocaleString('fr-FR');
+  $('#sUnique').textContent=ownedById.size.toLocaleString('fr-FR');
+  $('#sValue').textContent=eur(value);
+  $('#sSets').textContent=st.size;
+  $('#cCol').textContent=entries.size;
+  fillBoxes(); showBackup();
+  if(!skipRender){ render(); if(openId) renderSheet(); }
+}
+function boxes(){ const m=new Map(); for(const e of entries.values()){ const b=(e.box||'').trim(); m.set(b,(m.get(b)||0)+(+e.qty||0)); } return m; }
+function fillBoxes(){
+  const m=boxes(), sel=$('#cBox'), cur=sel.value;
+  const named=[...m.keys()].filter(Boolean).sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+  sel.innerHTML='<option value="">Tous les rangements</option>'+named.map(b=>`<option value="${esc(b)}">${esc(b)} (${m.get(b)})</option>`).join('')+(m.has('')?`<option value="__none">Non rangées (${m.get('')})</option>`:'');
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+  $('#boxList').innerHTML=named.map(b=>`<option value="${esc(b)}"></option>`).join('');
+}
+function tc(c){ return c.type>=0?`var(--t${c.type})`:'var(--tn)'; }
+function numOf(c){ return c.lid+(c.set.total?'/'+c.set.total:''); }
+function refOf(c){ return (c.set.code?c.set.code+' ':'')+numOf(c); }
+function locLabel(e){ const b=(e.box||'').trim(), s=(e.spot||'').trim(); return b&&s?`${b} · ${s}`:(b||s); }
+
+/* ---------- catalogue ---------- */
+let state={view:'cat', own:'', shown:60, setFilter:'started'};
+function filtered(){
+  const q=norm($('#q').value.trim()), si=$('#fSet').value, ft=$('#fType').value, sort=$('#fSort').value;
+  const terms=q?q.split(/\s+/):[];
+  const out=cards.filter(c=>{
+    if (si!=='' && c.set.i!=+si) return false;
+    if (ft!==''){ if(ft==='t'||ft==='e'){ if(c.cat!==ft) return false; } else if(c.type!=+ft||c.cat!=='p') return false; }
+    if (state.own==='own' && !ownedById.has(c.id)) return false;
+    if (state.own==='miss' && ownedById.has(c.id)) return false;
+    for (const t of terms) if(!c.hay.includes(t)) return false;
+    return true;
+  });
+  if (sort==='num' || si!=='') out.sort((a,b)=>cmpId(a.lid,b.lid) || a.set.date.localeCompare(b.set.date));
+  else if (sort==='old') out.sort((a,b)=>a.set.date.localeCompare(b.set.date)||cmpId(a.lid,b.lid));
+  else out.sort((a,b)=>b.set.date.localeCompare(a.set.date)||cmpId(a.lid,b.lid));
+  return out;
+}
+function tile(c){
+  const q=ownedById.get(c.id)||0, mp=marketPrice(c.id, c.vars.includes('n')?'n':c.vars[0]);
+  return `<button class="slot${q?' owned':''}" data-id="${esc(c.id)}" aria-label="${esc(c.name)}, ${esc(c.set.name)} ${esc(c.lid)}${q?', possédée ×'+q:''}">
+    ${q?`<span class="badge">×${q}</span>`:''}
+    <div class="pocket">${pocket(c,'low')}</div>
+    <div class="cap"><span class="s">${esc(c.set.name)}</span><span class="no">${esc(refOf(c))}</span></div>
+    <div class="cap2"><span class="nm">${esc(c.name)}</span>${mp!=null?`<span class="px">${eur(mp)}</span>`:''}</div>
+  </button>`;
+}
+function renderCatalog(){
+  const list=filtered();
+  $('#resCount').textContent=`${list.length.toLocaleString('fr-FR')} carte${list.length>1?'s':''}`;
+  const grid=$('#grid');
+  if(!list.length){ grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><h3>Aucune carte trouvée</h3><p>Essaie le nom anglais, ou un numéro comme « 4/102 ».</p></div>`; $('#moreBtn').hidden=true; return; }
+  grid.innerHTML=list.slice(0,state.shown).map(tile).join('');
+  $('#moreBtn').hidden=list.length<=state.shown;
+  $('#moreBtn').textContent=`Afficher plus (${(list.length-state.shown).toLocaleString('fr-FR')} restantes)`;
+}
+
+/* ---------- collection ---------- */
+function renderCollection(){
+  const box=$('#colList');
+  if(!entries.size){
+    box.innerHTML=`<div class="empty"><h3>Ton classeur est vide</h3><p>Cherche une carte dans le catalogue, touche-la, puis choisis la variante, l’état et son rangement.</p><button class="btn primary" id="goCat">Ouvrir le catalogue</button></div>`;
+    $('#colCount').textContent=''; $('#goCat').onclick=()=>switchView('cat'); return;
+  }
+  const q=norm($('#cq').value.trim()), sort=$('#cSort').value, bf=$('#cBox').value;
+  let rows=[...entries].map(([id,e])=>({id,e,c:byId.get(e.card),u:unitValue(e)})).filter(r=>r.c);
+  if (bf==='__none') rows=rows.filter(r=>!(r.e.box||'').trim()); else if (bf) rows=rows.filter(r=>(r.e.box||'').trim()===bf);
+  if (q) rows=rows.filter(r=>(r.c.hay+' '+norm(locLabel(r.e))+' '+norm(r.e.cond)).includes(q));
+  const val=r=>(+r.e.qty||0)*(r.u.v||0);
+  const byBox=(a,b)=>(a.e.box||'~').localeCompare(b.e.box||'~','fr',{numeric:true})||(a.e.spot||'').localeCompare(b.e.spot||'','fr',{numeric:true});
+  rows.sort({added:(a,b)=>(b.e.added||0)-(a.e.added||0), value:(a,b)=>val(b)-val(a), name:(a,b)=>a.c.name.localeCompare(b.c.name,'fr'), set:(a,b)=>b.c.set.date.localeCompare(a.c.set.date)||cmpId(a.c.lid,b.c.lid), box:byBox}[sort]);
+  const tq=rows.reduce((s,r)=>s+(+r.e.qty||0),0), tv=rows.reduce((s,r)=>s+val(r),0);
+  $('#colCount').textContent=`${rows.length} ligne${rows.length>1?'s':''} · ${tq} carte${tq>1?'s':''} · ${eur(tv)} (${cfg.cond?'ajusté à l’état, ':''}${REF_FR[cfg.ref]} Cardmarket)`;
+  let html='<div class="list">', lastG=null;
+  for (const {id,e,c,u} of rows){
+    if (sort==='box'){ const g=(e.box||'').trim()||'Non rangées'; if(g!==lastG){ const gr=rows.filter(r=>((r.e.box||'').trim()||'Non rangées')===g); html+=`<div class="grouph"><span>${esc(g)}</span><span class="num">${gr.reduce((s,r)=>s+(+r.e.qty||0),0)} cartes · ${eur(gr.reduce((s,r)=>s+val(r),0))}</span></div>`; lastG=g; } }
+    const loc=locLabel(e);
+    html+=`<div class="item" data-id="${esc(c.id)}" data-entry="${esc(id)}" tabindex="0" role="button">
+      <div class="thumb" style="--tc:${tc(c)}">${thumbImg(c)}</div>
+      <div style="min-width:0;display:grid;gap:3px">
+        <div class="t">${esc(c.name)} <span style="font-family:var(--mono);font-weight:500;font-size:13px;color:var(--ink-2)">${esc(refOf(c))}</span></div>
+        <div class="s"><span>${esc(c.set.name)}</span><span class="pill">${esc(VAR_FR[e.variant]||e.variant)}</span><span class="pill">${esc(e.cond)}</span>${loc?`<span class="pill loc">${esc(loc)}</span>`:''}</div>
+      </div>
+      <div class="v"><b>×${+e.qty||0}</b><span>${u.v!=null?eur((+e.qty||0)*u.v)+(u.src==='manuel'?' · manuel':''):u.src}</span></div>
+    </div>`;
+  }
+  box.innerHTML=html+'</div>';
+}
+
+/* ---------- sets ---------- */
+function renderSets(){
+  const counts=new Map();
+  for(const id of ownedById.keys()){ const c=byId.get(id); if(c) counts.set(c.set.i,(counts.get(c.set.i)||0)+1); }
+  let list=sets.slice(); if(state.setFilter==='started') list=list.filter(s=>counts.has(s.i));
+  list.sort((a,b)=>b.date.localeCompare(a.date));
+  $('#setCount').textContent=`${list.length} série${list.length>1?'s':''}`;
+  const box=$('#setList');
+  if(!list.length){ box.innerHTML=`<div class="empty" style="grid-column:1/-1"><h3>Aucune série entamée</h3><p>Dès que tu ajoutes une carte, sa série apparaît ici avec ta progression.</p><button class="btn" id="showAllSets">Voir toutes les séries</button></div>`; $('#showAllSets').onclick=()=>setSetFilter('all'); return; }
+  let html='', last=null;
+  for(const s of list){
+    if(s.serie!==last){ html+=`<div class="sethead">${esc(s.serie)}</div>`; last=s.serie; }
+    const have=counts.get(s.i)||0, pct=s.n?Math.round(have/s.n*100):0;
+    html+=`<button class="setrow" data-set="${s.i}"><div class="h"><b>${esc(s.name)}</b><span class="num">${have}/${s.n}</span></div><div class="bar"><i style="width:${pct}%"></i></div><div class="sub"><span>${esc(s.code||s.id)}${s.date?' · '+s.date.slice(0,4):''}</span><span>${pct} %</span></div></button>`;
+  }
+  box.innerHTML=html;
+}
+function setSetFilter(f){ state.setFilter=f; $('#sStarted').setAttribute('aria-pressed',String(f==='started')); $('#sAllSets').setAttribute('aria-pressed',String(f==='all')); renderSets(); }
+
+function render(){ if(state.view==='cat') renderCatalog(); if(state.view==='col') renderCollection(); if(state.view==='set') renderSets(); if(state.view==='scan') renderScan(); }
+function switchView(v){ state.view=v; document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.view===v))); ['cat','col','scan','set'].forEach(x=>$('#view-'+x).hidden=x!==v); render(); if(v==='scan' && matchMedia('(pointer:fine)').matches) $('#scNum').focus(); }
+
+/* ---------- scan mode ---------- */
+const scan = Object.assign({set:null, variant:'n', cond:'NM', box:'', spot:'', own:''}, LS.get('classeur-fr-scan',{}));
+const undo = [];
+const newId = () => 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const lidKey = s => String(s).toLowerCase().replace(/\s+/g,'').replace(/^([a-z]*)0*(\d)/,'$1$2');
+const VAR_SHORT = {n:'N',r:'R',h:'H','1':'1ʳᵉ',p:'W',l:'L',m:'M'};
+function saveScan(){ scan.box=$('#scBox').value; scan.spot=$('#scSpot').value; LS.set('classeur-fr-scan',{set:scan.set,variant:scan.variant,cond:scan.cond,box:scan.box,spot:scan.spot}); }
+function scanSet(){ return setById.get(scan.set) || [...sets].sort((a,b)=>b.date.localeCompare(a.date))[0]; }
+function scanCards(){ const s=scanSet(); return cards.filter(c=>c.set===s).sort((a,b)=>cmpId(a.lid,b.lid)); }
+function fillScanControls(){
+  $('#scVar').innerHTML=[['n','Normale'],['r','Reverse'],['h','Holo'],['1','1ʳᵉ édition']].map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.variant===k}">${l}</button>`).join('');
+  $('#scCond').innerHTML=COND.map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.cond===k}" title="${l}">${k}</button>`).join('');
+}
+function scanTile(c){
+  const vc=varsById.get(c.id)||{}, tot=ownedById.get(c.id)||0;
+  return `<div class="stile${tot?' owned':''}" data-id="${esc(c.id)}">
+    <button class="add" type="button" data-add aria-label="Ajouter ${esc(c.name)} n° ${esc(c.lid)}">${tot?`<span class="badge">×${tot}</span>`:''}<div class="pocket">${pocket(c,'low')}</div></button>
+    <div class="scap"><span class="no">${esc(c.lid)}</span><span class="vc">${Object.entries(vc).map(([v,q])=>`<span title="${VAR_FR[v]||v}">${VAR_SHORT[v]||v}${q>1?'×'+q:''}</span>`).join('')}</span>${tot?'<button class="minus" type="button" data-minus aria-label="Retirer un exemplaire">−</button>':''}</div>
+  </div>`;
+}
+function renderScan(){
+  const s=scanSet(); if(!s) return; scan.set=s.id; $('#scSet').value=String(s.i);
+  const list=scanCards();
+  const shown = scan.own==='miss' ? list.filter(c=>!ownedById.has(c.id)) : scan.own==='own' ? list.filter(c=>ownedById.has(c.id)) : list;
+  $('#scGrid').innerHTML = shown.length ? shown.map(scanTile).join('') : `<div class="empty" style="grid-column:1/-1"><h3>${scan.own==='miss'?'Série complète':'Aucune carte possédée dans cette série'}</h3><p>${scan.own==='miss'?'Tu as toutes les cartes de '+esc(s.name)+'.':'Tape un numéro ou touche une carte dans « Toutes » pour commencer.'}</p></div>`;
+  $('#scCount').textContent = `${esc(s.name)}${s.code?' · '+s.code:''} · ${shown.length} carte${shown.length>1?'s':''} affichée${shown.length>1?'s':''}`;
+  scanProgress(list);
+}
+function scanProgress(list){
+  list = list || scanCards();
+  const have=list.filter(c=>ownedById.has(c.id)).length;
+  const rv=list.filter(c=>c.vars.includes('r')), haveR=rv.filter(c=>(varsById.get(c.id)||{}).r).length;
+  $('#scHave').textContent=`${have}/${list.length}`;
+  $('#scRev').textContent = rv.length ? `Reverse ${haveR}/${rv.length}` : '';
+  $('#scBar').style.width=(list.length?have/list.length*100:0)+'%';
+}
+function patchTile(id){
+  const sel=`.stile[data-id="${CSS.escape(id)}"]`, el=$('#scGrid').querySelector(sel), c=byId.get(id);
+  if (el && c){ el.outerHTML=scanTile(c); $('#scGrid').querySelector(sel)?.classList.add('flash'); }
+  scanProgress();
+}
+function resolveVariant(c, v){ if(c.vars.includes(v)) return v; if(v==='n'&&c.vars.includes('h')) return 'h'; if(v==='h'&&c.vars.includes('n')) return 'n'; return v; }
+function scanAdd(c, v){
+  saveScan();
+  v = resolveVariant(c, v||scan.variant);
+  const box=scan.box.trim(), spot=scan.spot.trim(), cond=scan.cond;
+  const same=[...entries].find(([,x])=>x.card===c.id&&x.variant===v&&x.cond===cond&&(x.box||'')===box&&(x.spot||'')===spot);
+  let id, before=null;
+  if (same){ id=same[0]; before={...same[1]}; entries.set(id,{...same[1], qty:(+same[1].qty||0)+1}); }
+  else { id=newId(); entries.set(id,{card:c.id, variant:v, cond, qty:1, price:null, box, spot, added:Date.now()}); }
+  if (box) LS.set('classeur-fr-lastbox', box);
+  undo.push({id, before, card:c.id}); if (undo.length>200) undo.shift();
+  afterScanChange(c, `+1 ${VAR_FR[v]||v} · ${cond}`, !c.vars.includes(v));
+}
+function scanRemove(c){
+  const all=[...entries].filter(([,x])=>x.card===c.id).sort((a,b)=>(b[1].added||0)-(a[1].added||0));
+  if (!all.length) return;
+  const v=resolveVariant(c, scan.variant), box=scan.box.trim(), spot=scan.spot.trim();
+  const [id,x] = all.find(([,e])=>e.variant===v&&(e.box||'')===box&&(e.spot||'')===spot) || all.find(([,e])=>e.variant===v) || all[0];
+  undo.push({id, before:{...x}, card:c.id});
+  if ((+x.qty||0)>1) entries.set(id,{...x, qty:x.qty-1}); else entries.delete(id);
+  afterScanChange(c, `−1 ${VAR_FR[x.variant]||x.variant} · ${x.cond}`);
+}
+function scanUndo(){
+  const u=undo.pop(); if(!u) return;
+  if (u.before) entries.set(u.id, u.before); else entries.delete(u.id);
+  afterScanChange(byId.get(u.card), 'Action annulée', false, true);
+}
+function afterScanChange(c, what, warnVar, isUndo){
+  saveEntries(); recompute(true);
+  if (!c) return;
+  patchTile(c.id); queuePrice(c.id);
+  const q=ownedById.get(c.id)||0, last=$('#scLast');
+  last.className='last';
+  last.innerHTML=`<div class="thumb" style="--tc:${tc(c)}">${thumbImg(c)}</div><div class="txt"><b>${esc(c.name)} · ${esc(refOf(c))}</b><span>${esc(what)}${warnVar?' (variante non répertoriée pour cette carte)':''} · ${q} en tout</span></div>${undo.length?'<button class="btn small" type="button" id="scUndo">Annuler</button>':''}`;
+  const ub=$('#scUndo'); if (ub) ub.onclick=scanUndo;
+}
+const pq=new Set(); let pqT;
+function queuePrice(id){
+  if (!online || (prices[id] && Date.now()-prices[id].t<DAY)) return;
+  pq.add(id); clearTimeout(pqT);
+  pqT=setTimeout(async()=>{ const ids=[...pq]; pq.clear(); await pool(ids,4,async i=>{ try{ await fetchPrice(i); }catch(e){} }); recompute(state.view==='scan'); showPriceStatus(); }, 900);
+}
+$('#scNum').addEventListener('keydown', e=>{
+  if (e.key!=='Enter') return; e.preventDefault();
+  const raw=$('#scNum').value.trim().toLowerCase(); if(!raw) return;
+  let num=raw.split('/')[0].trim(), v=null;
+  const m=num.match(/^(.*\d)\s*([rhn])$/); if (m){ num=m[1]; v=m[2]; }
+  const k=lidKey(num), c=scanCards().find(x=>lidKey(x.lid)===k);
+  const last=$('#scLast');
+  if (!c){ last.className='last err'; last.textContent=`Pas de carte n° ${raw} dans ${scanSet().name}. Vérifie la série choisie.`; $('#scNum').select(); return; }
+  scanAdd(c, v); $('#scNum').value='';
+  const el=$('#scGrid').querySelector(`.stile[data-id="${CSS.escape(c.id)}"]`); if (el) el.scrollIntoView({block:'nearest', behavior:'smooth'});
+});
+$('#scGrid').addEventListener('click', e=>{
+  const t=e.target.closest('.stile'); if(!t) return; const c=byId.get(t.dataset.id); if(!c) return;
+  if (e.target.closest('[data-minus]')) scanRemove(c); else if (e.target.closest('[data-add]')) scanAdd(c);
+});
+$('#scVar').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; scan.variant=b.dataset.v; saveScan(); fillScanControls(); });
+$('#scCond').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; scan.cond=b.dataset.v; saveScan(); fillScanControls(); });
+$('#scSet').onchange=()=>{ scan.set=sets[+$('#scSet').value].id; saveScan(); undo.length=0; $('#scLast').innerHTML='<span class="note">Tape un numéro ou touche une carte pour l’ajouter.</span>'; renderScan(); };
+$('#scBox').addEventListener('input', saveScan); $('#scSpot').addEventListener('input', saveScan);
+document.querySelectorAll('[data-sown]').forEach(b=>b.onclick=()=>{ scan.own=b.dataset.sown; document.querySelectorAll('[data-sown]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); renderScan(); });
+$('#scBox').value=scan.box||''; $('#scSpot').value=scan.spot||''; fillScanControls();
+
+
+/*VISION*/
+/* ---------- camera scan: detect the card, flatten it, find it among every French card ---------- */
+const ACCEPT_S = 0.6, ACCEPT_M = 0.15, VOTES = 3;   // tuned on real iPhone scans: right card ≈ 0.97 / 0.43, wrong ones ≤ 0.65 / 0.07
+const cam = { stream:null, timer:null, busy:false, hist:[], pending:null, auto: LS.get('classeur-fr-autoadd', true), warnDup: LS.get('classeur-fr-warndup', true),
+  track:null, torch:false, block:null, emptyN:0, unknownN:0, diag: LS.get('classeur-fr-diag', false), refs:null, index:null, mode:'', diagKey:'', session:new Map(), shown:null };
+const normName = s => norm(s).replace(/[^a-z0-9]+/g,' ').trim();
+
+/* the visual index of every card, built each week by GitHub (vision-index.json + vision-<hash>.bin) */
+let indexPromise=null;
+function loadIndex(onProgress){
+  if (!indexPromise) indexPromise=(async()=>{
+    if (!/^https?:$/.test(location.protocol)) return null;
+    const meta=await fetch('vision-index.json', {cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
+    if (!meta || meta.dim!==Vision.C_DIM || !meta.bin) return null;
+    const r=await fetch(meta.bin); if (!r.ok) return null;
+    const total=+r.headers.get('content-length')||meta.n*meta.dim; let got=0; const parts=[];
+    if (r.body && r.body.getReader){ const rd=r.body.getReader(); for(;;){ const {done,value}=await rd.read(); if(done) break; parts.push(value); got+=value.length; if(onProgress) onProgress(got,total); } }
+    else parts.push(new Uint8Array(await r.arrayBuffer()));
+    const buf=new Uint8Array(parts.reduce((n,p)=>n+p.length,0)); let o=0; for(const p of parts){ buf.set(p,o); o+=p.length; }
+    if (buf.length!==meta.n*meta.dim) return null;
+    return {bin:new Int8Array(buf.buffer), n:meta.n, ids:meta.ids, built:meta.built};
+  })().catch(()=>null).then(x=>{ if(!x) indexPromise=null; return x; });
+  return indexPromise;
+}
+/* fallback when the index is not available (file opened locally, first deployment): scans of the chosen set */
+const refCache = new Map();
+async function loadRefs(set, onProgress){
+  if (refCache.has(set.id)) return refCache.get(set.id);
+  const list = cards.filter(c=>c.set===set), refs=[]; let done=0;
+  await pool(list, 6, async c=>{
+    for (const u of [...new Set([imgUrl(c,'fr'), imgUrl(c,'en')].filter(Boolean))]){
+      try{ const r=await fetch(u+'/low.webp', {mode:'cors'}); if(!r.ok) throw 0; const b=await createImageBitmap(await r.blob());
+        const cv=document.createElement('canvas'); cv.width=b.width; cv.height=b.height; const x=cv.getContext('2d',{willReadFrequently:true}); x.drawImage(b,0,0);
+        refs.push({id:c.id, d:Vision.describe(Vision.fromRGBA(x.getImageData(0,0,b.width,b.height)))}); break; }catch(e){}
+    }
+    done++; if (onProgress) onProgress(done, list.length);
+  });
+  if (refs.length) refCache.set(set.id, refs);
+  return refs;
+}
+const wk=document.createElement('canvas'), wkx=wk.getContext('2d', {willReadFrequently:true});
+function coverMap(){ const v=$('#camVideo'), r=v.getBoundingClientRect(), vw=v.videoWidth||1, vh=v.videoHeight||1, s=Math.max(r.width/vw, r.height/vh); return {s, ox:(r.width-vw*s)/2, oy:(r.height-vh*s)/2, r}; }
+function frameAndGuide(){
+  const v=$('#camVideo'), vw=v.videoWidth, vh=v.videoHeight, ws=640/Math.max(vw,vh), W=Math.round(vw*ws), H=Math.round(vh*ws);
+  if (wk.width!==W || wk.height!==H){ wk.width=W; wk.height=H; }
+  wkx.drawImage(v,0,0,W,H);
+  const m=coverMap(), gb=$('#camGuide').getBoundingClientRect();
+  const g={x:((gb.left-m.r.left-m.ox)/m.s)*ws, y:((gb.top-m.r.top-m.oy)/m.s)*ws, w:(gb.width/m.s)*ws, h:(gb.height/m.s)*ws};
+  return {img:wkx.getImageData(0,0,W,H), g, ws};
+}
+function drawQuad(q, ws, color){
+  const c=$('#camOverlay'), m=coverMap(), dpr=window.devicePixelRatio||1, W=Math.round(m.r.width*dpr), H=Math.round(m.r.height*dpr);
+  if (c.width!==W || c.height!==H){ c.width=W; c.height=H; }
+  const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,m.r.width,m.r.height);
+  if (!q) return;
+  x.strokeStyle=color; x.lineWidth=3; x.lineJoin='round'; x.beginPath();
+  q.forEach((p,i)=>{ const X=p[0]/ws*m.s+m.ox, Y=p[1]/ws*m.s+m.oy; if(i) x.lineTo(X,Y); else x.moveTo(X,Y); }); x.closePath(); x.stroke();
+}
+/* one frame -> a decision: best card, how sure, and the other editions with the same artwork */
+function decide(top){
+  const list=top.filter(t=>byId.has(t.id)); if (!list.length) return null;
+  const best=list[0], c=byId.get(best.id), key=normName(c.name);
+  const other=list.find(t=>normName(byId.get(t.id).name)!==key);
+  const editions=list.filter(t=>normName(byId.get(t.id).name)===key && t.s>=best.s-0.06).map(t=>byId.get(t.id));
+  return {c, key, s:best.s, margin:best.s-(other?other.s:0), editions, top:list.slice(0,3)};
+}
+function pickEdition(d){
+  if (d.editions.length<=1) return d.c;
+  let best=null, score=-1;
+  for (const e of d.editions){ const s=(cam.session.get(e.set.id)||0)*2 + (e.set===scanSet()?1:0) + (ownedById.has(e.id)?0.5:0); if(s>score){ score=s; best=e; } }
+  return score>0 ? best : null;   // no hint: let the collector choose
+}
+const diagFlat=document.createElement('canvas'); diagFlat.width=Vision.RW; diagFlat.height=Vision.RH;
+function showDiag(r, d, ms, good){
+  const box=$('#camDiag'); if (box.hidden) return;
+  if (!box.querySelector('.dg-flat canvas')) box.querySelector('.dg-flat').appendChild(diagFlat);
+  diagFlat.getContext('2d').putImageData(Vision.toImageData(r.rgb),0,0);
+  const top=d?d.top:[], key=top.map(t=>t.id).join('|');
+  if (key!==cam.diagKey){ cam.diagKey=key; box.querySelector('.dg-top').innerHTML=top.map(t=>{ const c=byId.get(t.id); return `<div class="dg-c" data-id="${esc(t.id)}"><div class="thumb">${c?thumbImg(c):''}</div><span>${esc(c?(c.set.code?c.set.code+' ':'')+c.lid:t.id)}</span><b class="num"></b></div>`; }).join(''); }
+  top.forEach(t=>{ const el=box.querySelector(`.dg-c[data-id="${CSS.escape(t.id)}"] b`); if(el) el.textContent=t.s.toFixed(2); });
+  box.querySelector('.dg-stats').textContent=`${good?'Sûr':'Pas sûr'} · score ${d?d.s.toFixed(2):'–'} (min ${ACCEPT_S}) · écart ${d?d.margin.toFixed(2):'–'} (min ${ACCEPT_M})${d&&d.editions.length>1?' · '+d.editions.length+' éditions':''} · ${r.edges?'bords trouvés':'bords non trouvés'} · ${cam.mode==='global'?(cam.index.n.toLocaleString('fr-FR')+' cartes'):('série '+(scanSet().code||scanSet().name))} · ${Math.round(ms)} ms`;
+}
+function camStatus(t, cls){ const s=$('#camStatus'); s.textContent=t; s.className='cam-status'+(cls?' '+cls:''); }
+function fillCamVar(){
+  $('#camVar').innerHTML=[['n','Normale'],['r','Reverse'],['h','Holo']].map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.variant===k}">${l}</button>`).join('');
+  $('#camSet').textContent = cam.mode==='global' ? 'Toutes les cartes françaises' : `${scanSet().name}${scanSet().code?' · '+scanSet().code:''}`;
+  $('#camDiagBtn').setAttribute('aria-pressed', String(cam.diag)); $('#camDiag').hidden=!cam.diag;
+  $('#camAuto').checked=cam.auto; $('#camDup').checked=cam.warnDup;
+}
+async function openCam(){
+  $('#cam').hidden=false; document.body.style.overflow='hidden';
+  cam.mode=''; fillCamVar(); $('#camResult').innerHTML=''; $('#camMsg').hidden=true;
+  cam.hist=[]; cam.block=null; cam.emptyN=0; cam.unknownN=0; cam.pending=null; cam.diagKey=''; drawQuad(null,1);
+  camStatus('Chargement…','busy');
+  const ready=(async()=>{
+    const idx=await loadIndex((got,total)=>camStatus(`Téléchargement des empreintes de toutes les cartes… ${Math.round(got/1e6)}/${Math.round(total/1e6)} Mo (une seule fois)`,'busy'));
+    if (idx){ cam.index=idx; cam.mode='global'; fillCamVar(); return true; }
+    cam.mode='set'; fillCamVar();
+    cam.refs=await loadRefs(scanSet(), (d,n)=>camStatus(`Préparation des images de ${scanSet().name}… ${d}/${n}`,'busy'));
+    return cam.refs.length>0;
+  })();
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    camMessage('La caméra n’est pas accessible depuis cette page.', 'Sur téléphone, la caméra ne marche que sur une adresse https. Tu peux quand même prendre une photo de la carte.'); await ready; return;
+  }
+  try{ cam.stream=await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}}}); }
+  catch(e){ camMessage(e&&e.name==='NotAllowedError'?'Accès à la caméra refusé.':'Impossible d’ouvrir la caméra.', 'Autorise la caméra pour cette page dans les réglages du navigateur, ou prends une photo de la carte à la place.'); await ready; return; }
+  const v=$('#camVideo'); v.srcObject=cam.stream; await v.play().catch(()=>{});
+  cam.track=cam.stream.getVideoTracks()[0];
+  try{ const caps=cam.track.getCapabilities?cam.track.getCapabilities():{}; $('#camTorch').hidden=!caps.torch; }catch(e){ $('#camTorch').hidden=true; }
+  if (!await ready){ camMessage('Les images des cartes ne se chargent pas.', 'La reconnaissance a besoin d’une connexion la première fois. Vérifie ta connexion puis rouvre la caméra.'); stopStream(); return; }
+  camStatus('Place une carte dans le cadre');
+  cam.timer=setInterval(camTick, 160);
+}
+function camMessage(title, text){
+  $('#camMsg').hidden=false;
+  $('#camMsg').innerHTML=`<b>${esc(title)}</b><p>${esc(text)}</p><div class="chips" style="justify-content:center"><button class="btn primary" type="button" id="camPhotoBtn">Prendre une photo</button><button class="btn" type="button" data-camclose>Fermer</button></div>`;
+  $('#camPhotoBtn').onclick=()=>$('#camPhoto').click(); camStatus('');
+}
+function stopStream(){ clearInterval(cam.timer); cam.timer=null; if(cam.stream){ cam.stream.getTracks().forEach(t=>t.stop()); cam.stream=null; } }
+function closeCam(){ stopStream(); $('#cam').hidden=true; document.body.style.overflow=''; renderScan(); }
+function recognise(img, g){
+  if (cam.mode==='global'){ const r=Vision.identifyGlobal(img, g, cam.index, 12); return {r, d:decide(r.top)}; }
+  const r=Vision.identify(img, g, cam.refs); return {r, d:decide(r.top)};
+}
+function camTick(){
+  const v=$('#camVideo'); if (!v.videoWidth || cam.busy || !cam.mode) return;
+  cam.busy=true;
+  try{
+    const t0=performance.now(), {img,g,ws}=frameAndGuide(), {r,d}=recognise(img,g), ms=performance.now()-t0;
+    const good = !!d && d.s>=ACCEPT_S && d.margin>=ACCEPT_M;
+    drawQuad(r.edgeQuad||r.quad, ws, good?'#5BE38F':(r.edges?'#FFD646':'rgba(255,255,255,.4)'));
+    if (cam.diag) showDiag(r, d, ms, good);
+    cam.hist.push(good?d.key:null); if (cam.hist.length>6) cam.hist.shift();
+    // once a card is handled, it stays blocked until the frame is really empty for about a second
+    if (cam.block){
+      cam.emptyN = (!r.edges && (!d || d.s<0.45)) ? cam.emptyN+1 : 0;
+      if (cam.emptyN>=7 && Date.now()-cam.block.t>1500){ cam.block=null; if(!cam.pending) camStatus('Place la carte suivante'); }
+    }
+    const blocked = good && cam.block && cam.block.key===d.key;
+    if (good && !blocked){
+      cam.unknownN=0;
+      if (cam.hist.filter(k=>k===d.key).length>=VOTES) handleCard(d);
+      else camStatus(`Reconnaissance… ${d.c.name}`, 'busy');
+    } else if (blocked){ /* keep what is on screen */ }
+    else if (r.edges){
+      cam.unknownN = (!d || d.s<0.55) ? cam.unknownN+1 : 0;
+      const msg = cam.mode==='global' ? 'Carte pas reconnue : tiens-la à plat sous une lumière douce. Une carte toute récente arrive dans l’app le lundi suivant sa sortie.' : `Carte introuvable dans ${scanSet().name} : vérifie la série choisie`;
+      camStatus(cam.unknownN>=14 ? msg : 'Carte repérée : tiens-la bien à plat, sans reflet', cam.unknownN>=14?'warn':'');
+    } else { cam.unknownN=0; if(!cam.block) camStatus('Place une carte dans le cadre'); }
+  } catch(e){ camStatus('Erreur de traitement, réessaie','warn'); }
+  finally{ cam.busy=false; }
+}
+function handleCard(d){
+  cam.hist=[]; cam.block={key:d.key, t:Date.now()}; cam.emptyN=0;
+  const c=pickEdition(d);
+  if (!c){ cam.pending={editions:d.editions}; showChoice(d.editions); camStatus('Même dessin dans plusieurs séries : laquelle ?','ok'); return; }
+  const have=ownedById.get(c.id)||0;
+  if (have && cam.warnDup){ cam.pending={c}; showDup(c); camStatus('Déjà dans ta collection','warn'); try{ if(navigator.vibrate) navigator.vibrate([40,60,40]); }catch(e){} return; }
+  if (cam.auto) camAdd(c); else { cam.pending={c}; showConfirm(c); camStatus('Carte reconnue','ok'); }
+}
+function camAdd(c){
+  if (c.set!==scanSet()){ scan.set=c.set.id; saveScan(); }
+  scanAdd(c); cam.pending=null; cam.session.set(c.set.id,(cam.session.get(c.set.id)||0)+1);
+  if (!cam.block || cam.block.key!==normName(c.name)) cam.block={key:normName(c.name), t:Date.now()};
+  showAdded(c); camStatus('Ajoutée ! Retire la carte et passe à la suivante', 'ok');
+  try{ if (navigator.vibrate) navigator.vibrate(60); }catch(e){}
+}
+function cardLine(c, extra, acts){
+  return `<div class="cam-card"><div class="thumb" style="--tc:${tc(c)}">${thumbImg(c)}</div><div class="txt"><b>${esc(c.name)}</b><span>${esc(c.set.name)} · ${esc(refOf(c))}</span>${extra?`<span>${extra}</span>`:''}</div><div class="acts">${acts}</div></div>`;
+}
+function showAdded(c){ cam.shown=c; const q=ownedById.get(c.id)||0; $('#camResult').innerHTML=cardLine(c, `${esc(VAR_FR[resolveVariant(c,scan.variant)]||'')} · ${q} en tout`, '<button class="btn small" type="button" data-camplus aria-label="Ajouter un autre exemplaire">+1</button><button class="btn small" type="button" data-camundo>Annuler</button>'); }
+function showConfirm(c){ $('#camResult').innerHTML=cardLine(c, 'À confirmer', '<button class="btn small primary" type="button" data-camok>Ajouter</button><button class="btn small" type="button" data-camno>Pas ça</button>'); }
+function showDup(c){
+  const mine=[...entries.values()].filter(e=>e.card===c.id), q=mine.reduce((n,e)=>n+(+e.qty||0),0), where=[...new Set(mine.map(locLabel).filter(Boolean))].join(', ');
+  $('#camResult').innerHTML=cardLine(c, `Tu l’as déjà : ×${q}${where?' · '+esc(where):''}`, '<button class="btn small" type="button" data-camok>Ajouter quand même</button><button class="btn small primary" type="button" data-camno>Pas besoin</button>');
+}
+function showChoice(eds){
+  $('#camResult').innerHTML=`<div class="cam-card cam-choice"><div class="txt"><b>${esc(eds[0].name)}</b><span>Ce dessin existe dans plusieurs séries. Laquelle as-tu ? (code en bas à gauche de la carte)</span><div class="chips">${eds.slice(0,5).map(e=>`<button class="btn small" type="button" data-camed="${esc(e.id)}">${esc(refOf(e))}</button>`).join('')}</div></div><div class="acts"><button class="btn small" type="button" data-camno>Aucune</button></div></div>`;
+}
+$('#cam').addEventListener('click', e=>{
+  if (e.target.closest('[data-camclose]')) return closeCam();
+  const ed=e.target.closest('[data-camed]');
+  if (ed){ const c=byId.get(ed.dataset.camed); cam.session.set(c.set.id,(cam.session.get(c.set.id)||0)+1); if ((ownedById.get(c.id)||0) && cam.warnDup){ cam.pending={c}; showDup(c); camStatus('Déjà dans ta collection','warn'); } else camAdd(c); return; }
+  if (e.target.closest('[data-camok]') && cam.pending && cam.pending.c) return camAdd(cam.pending.c);
+  if (e.target.closest('[data-camplus]') && cam.shown) return camAdd(cam.shown);
+  if (e.target.closest('[data-camno]')){ cam.pending=null; $('#camResult').innerHTML=''; camStatus('Pas ajoutée. Passe à la carte suivante'); return; }
+  if (e.target.closest('[data-camundo]')){ scanUndo(); if(cam.shown) showAdded(cam.shown); camStatus('Dernier ajout annulé'); return; }
+  const vb=e.target.closest('#camVar button'); if (vb){ scan.variant=vb.dataset.v; saveScan(); fillCamVar(); fillScanControls(); }
+});
+$('#camClose').onclick=closeCam;
+$('#camDiagBtn').onclick=()=>{ cam.diag=!cam.diag; LS.set('classeur-fr-diag', cam.diag); cam.diagKey=''; fillCamVar(); };
+$('#camAuto').onchange=()=>{ cam.auto=$('#camAuto').checked; LS.set('classeur-fr-autoadd', cam.auto); };
+$('#camDup').onchange=()=>{ cam.warnDup=$('#camDup').checked; LS.set('classeur-fr-warndup', cam.warnDup); };
+$('#camTorch').onclick=async()=>{ try{ cam.torch=!cam.torch; await cam.track.applyConstraints({advanced:[{torch:cam.torch}]}); $('#camTorch').setAttribute('aria-pressed',String(cam.torch)); }catch(e){} };
+$('#camPhoto').onchange=async ev=>{
+  const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
+  $('#camMsg').hidden=true; camStatus('Analyse de la photo…','busy');
+  try{
+    if (!cam.mode){ const idx=await loadIndex(); if(idx){ cam.index=idx; cam.mode='global'; } else { cam.refs=await loadRefs(scanSet()); cam.mode='set'; } fillCamVar(); }
+    const bmp=await createImageBitmap(f), ws=640/Math.max(bmp.width,bmp.height), W=Math.round(bmp.width*ws), H=Math.round(bmp.height*ws);
+    wk.width=W; wk.height=H; wkx.drawImage(bmp,0,0,W,H);
+    let gh=H*0.86, gw=gh*63/88; if (gw>W*0.86){ gw=W*0.86; gh=gw*88/63; }
+    const {r,d}=recognise(wkx.getImageData(0,0,W,H), {x:(W-gw)/2, y:(H-gh)/2, w:gw, h:gh});
+    if (cam.diag) showDiag(r, d, 0, !!d && d.s>=ACCEPT_S && d.margin>=ACCEPT_M);
+    if (d && d.s>=0.55 && d.margin>=0.12){ const c=pickEdition(d); if(!c){ cam.pending={editions:d.editions}; showChoice(d.editions); } else if((ownedById.get(c.id)||0) && cam.warnDup){ cam.pending={c}; showDup(c); } else { cam.pending={c}; showConfirm(c); } camStatus('Carte reconnue, à confirmer','ok'); }
+    else camStatus('Carte pas reconnue : cadre-la en entier, bien à plat, sans reflet','warn');
+  }catch(e){ camStatus('Photo illisible','warn'); }
+};
+$('#scCam').onclick=openCam;
+
+/* ---------- Cardmarket links ---------- */
+const CM_COND = {MT:1,NM:2,EX:3,GD:4,LP:5,PL:6,PO:7};
+function cmId(c, variant){ const p=prices[c.id]; if(!p) return null; return (p.vp&&(p.vp[variant]||p.vp.n)) || (p.cm&&p.cm.idProduct) || null; }
+function cmUrl(c, variant, cond, fr){
+  const id=cmId(c, variant);
+  const q=[]; if(fr) q.push('language=2'); if(variant==='r') q.push('isReverseHolo=Y'); if(variant==='1') q.push('isFirstEd=Y'); if(cond&&CM_COND[cond]) q.push('minCondition='+CM_COND[cond]);
+  if (id) return `https://www.cardmarket.com/fr/Pokemon/Products?idProduct=${id}${q.length?'&'+q.join('&'):''}`;
+  return `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(c.en||c.name)}`;
+}
+function cmLinks(c, variant, cond){
+  const exact=!!cmId(c, variant), vl=variant==='r'?' · reverse':variant==='1'?' · 1ʳᵉ édition':'';
+  return `<div style="display:grid;gap:4px">
+    <a class="link" href="${esc(cmUrl(c,variant,cond,true))}" target="_blank" rel="noopener">Annonces en français${vl} · ${esc(cond)} ou mieux ↗</a>
+    <a class="link" style="font-weight:500;font-size:13px" href="${esc(cmUrl(c,variant,cond,false))}" target="_blank" rel="noopener">Toutes langues ↗</a>
+    <span class="note">${exact?'Le lien ouvre directement la fiche de cette carte sur Cardmarket avec les filtres de ton formulaire (variante, état).':'Fiche exacte pas encore connue : le lien lance une recherche par nom.'}</span></div>`;
+}
+/* ---------- sheet ---------- */
+let openId=null, form=null, editing=null, confirmDel=null, priceState='';
+function openSheet(id, entryId){
+  const c=byId.get(id); if(!c) return;
+  openId=id; confirmDel=null;
+  if(entryId && entries.has(entryId)){ editing=entryId; const e=entries.get(entryId); form={variant:e.variant,cond:e.cond,qty:+e.qty||1,price:e.price??'',box:e.box||'',spot:e.spot||''}; }
+  else { editing=null; const lastBox=LS.get('classeur-fr-lastbox',''); form={variant:c.vars.includes('n')?'n':c.vars[0],cond:'NM',qty:1,price:'',box:lastBox,spot:''}; }
+  $('#scrim').hidden=false; $('#sheet').hidden=false;
+  priceState = prices[id] && Date.now()-prices[id].t<DAY ? '' : 'loading';
+  renderSheet(); $('#shClose').focus();
+  if (online) fetchPrice(id).then(()=>{ priceState=''; if(openId===id){ keepForm(); renderSheet(); } recompute(); }).catch(()=>{ priceState='error'; if(openId===id){ keepForm(); renderSheet(); } });
+  else priceState='offline';
+}
+function closeSheet(){ openId=null; $('#scrim').hidden=true; $('#sheet').hidden=true; }
+function keepForm(){ const p=$('#price'), b=$('#box'), s=$('#spot'); if(p) form.price=p.value; if(b) form.box=b.value; if(s) form.spot=s.value; }
+function priceBlock(c){
+  const p=prices[c.id];
+  if (priceState==='loading' && !p) return `<div class="price"><h3>Prix Cardmarket</h3><p class="note">Chargement des ventes…</p></div>`;
+  if (priceState==='offline' && !p) return `<div class="price"><h3>Prix Cardmarket</h3><p class="note">Hors ligne : prix indisponible.</p></div>`;
+  if (!p || !p.cm) return `<div class="price"><h3>Prix Cardmarket</h3><p class="note">${priceState==='error'?'Le prix n’a pas pu être chargé. Réessaie plus tard.':'Aucune vente enregistrée pour cette carte. Tu peux saisir un prix manuel.'}</p></div>`;
+  const cm=p.cm, hasR=c.vars.includes('r') && ['avg30-holo','avg7-holo','trend-holo','low-holo'].some(k=>cm[k]!=null);
+  const rows=[['avg30','Moy. ventes 30 j'],['avg7','Moy. ventes 7 j'],['avg1','Moy. ventes 24 h'],['trend','Tendance'],['low','Plus bas']];
+  return `<div class="price"><div class="hd"><h3>Prix Cardmarket</h3><span class="note">${cm.updated?'au '+new Date(cm.updated).toLocaleDateString('fr-FR'):''}</span></div>
+    <div style="overflow-x:auto"><table class="ptable"><thead><tr><th></th><th>${c.vars.includes('h')&&!c.vars.includes('n')?'Holo':'Normale'}</th>${hasR?'<th>Reverse</th>':''}</tr></thead><tbody>
+    ${rows.map(([k,l])=>`<tr class="${k===cfg.ref?'ref':''}"><td>${l}</td><td>${eur(cm[k])}</td>${hasR?`<td>${eur(cm[k+'-holo'])}</td>`:''}</tr>`).join('')}
+    </tbody></table></div>
+    <p class="note">Toutes langues confondues sur Cardmarket. La ligne en gras sert à estimer ta collection.${c.vars.includes('1')?' Les 1ʳᵉ édition se vendent à part et souvent bien plus cher : saisis leur prix à la main.':''}</p>
+    ${cmLinks(c, form.variant, form.cond)}</div>`;
+}
+function renderSheet(){
+  const c=byId.get(openId); if(!c) return;
+  $('#shName').textContent=c.name;
+  $('#shSub').textContent=`${c.set.name} · ${refOf(c)}`;
+  const mine=[...entries].filter(([,e])=>e.card===c.id);
+  const auto=marketPrice(c.id, form.variant), est=auto!=null?auto*(cfg.cond?(COEF[form.cond]??1):1):null;
+  const variants=[...new Set([...c.vars, ...(c.vars.includes(form.variant)?[]:[form.variant])])];
+  $('#shBody').innerHTML=`
+    <div class="hero">
+      <div class="pocket">${pocket(c,'high')}</div>
+      <dl class="facts">
+        ${c.set.code?`<dt>Abréviation</dt><dd style="font-family:var(--mono)">${esc(c.set.code)}${c.set.oc?' <span style="color:var(--ink-3)">(aussi « '+esc(c.set.oc)+' »)</span>':''}</dd>`:''}
+        ${c.en?`<dt>Nom anglais</dt><dd>${esc(c.en)}</dd>`:''}
+        <dt>Catégorie</dt><dd>${CAT_FR[c.cat]}${c.type>=0?' · '+TYPE_FR[c.type]:''}</dd>
+        <dt>Rareté</dt><dd>${esc(RAR_FR[c.rar]||c.rar)}</dd>
+        <dt>Bloc</dt><dd>${esc(c.set.serie)}</dd>
+        ${c.set.date?`<dt>Sortie</dt><dd>${new Date(c.set.date).toLocaleDateString('fr-FR',{year:'numeric',month:'long',day:'numeric'})}</dd>`:''}
+        <dt>Variantes</dt><dd>${c.vars.map(v=>VAR_FR[v]||v).join(', ')}</dd>
+      </dl>
+    </div>
+    ${priceBlock(c)}
+    ${mine.length?`<div class="entries"><h3 style="font-size:16px">Dans ton classeur</h3>${mine.map(([id,e])=>{ const u=unitValue(e), loc=locLabel(e); return `
+      <div class="entry"><div class="l"><b class="num">×${+e.qty||0}</b><span class="pill">${esc(VAR_FR[e.variant]||e.variant)}</span><span class="pill">${esc(e.cond)}</span>${loc?`<span class="pill loc">${esc(loc)}</span>`:''}<span class="num" style="font-size:13px;color:var(--ink-2)">${u.v!=null?eur(u.v)+' / u'+(u.src==='manuel'?' (manuel)':''):''}</span><a class="link" style="font-size:13px" href="${esc(cmUrl(c,e.variant,e.cond,true))}" target="_blank" rel="noopener" title="Annonces en français pour cet exemplaire">Annonces ↗</a></div>
+      <div class="acts">${confirmDel===id?`<button class="btn small danger" data-act="del" data-id="${id}">Retirer</button><button class="btn small" data-act="nodel">Garder</button>`:`<button class="btn small" data-act="edit" data-id="${id}">Modifier</button><button class="btn small danger" data-act="askdel" data-id="${id}" aria-label="Retirer">✕</button>`}</div></div>`; }).join('')}</div>`:''}
+    <form class="form" id="addForm">
+      <h3>${editing?'Modifier cet exemplaire':'Ajouter à mon classeur'}</h3>
+      <div class="field full"><span class="lbl">Variante</span><div class="seg" data-f="variant">${variants.map(k=>`<button type="button" data-v="${k}" aria-pressed="${form.variant===k}">${VAR_FR[k]||k}</button>`).join('')}</div></div>
+      <div class="field full"><span class="lbl">État</span><div class="seg" data-f="cond">${COND.map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${form.cond===k}" title="${l}">${k}</button>`).join('')}</div>
+        <p class="note">${esc(COND.find(x=>x[0]===form.cond)[1])}${cfg.cond&&COEF[form.cond]<1?` · valeur estimée à ${Math.round(COEF[form.cond]*100)} % du prix de référence`:''}</p></div>
+      <div class="field"><label for="box">Rangement</label><input type="text" id="box" list="boxList" placeholder="Classeur bleu" value="${esc(form.box)}" autocomplete="off"></div>
+      <div class="field"><label for="spot">Emplacement</label><input type="text" id="spot" placeholder="Page 4, case 7" value="${esc(form.spot)}" autocomplete="off"></div>
+      <div class="field"><span class="lbl">Quantité</span><div class="stepper"><button type="button" data-step="-1" aria-label="Moins">−</button><output id="qtyOut" class="num">${form.qty}</output><button type="button" data-step="1" aria-label="Plus">+</button></div></div>
+      <div class="field"><label for="price">Prix manuel (€)</label><input type="number" id="price" min="0" step="0.01" inputmode="decimal" placeholder="${est!=null?'auto : '+est.toFixed(2).replace('.',','):'optionnel'}" value="${esc(form.price)}"></div>
+      <p class="note full">${est!=null?`Estimation automatique : <b>${eur(est)}</b> l’unité (${REF_FR[cfg.ref]}${cfg.cond&&COEF[form.cond]<1?', ajustée à l’état':''}). Laisse le prix manuel vide pour suivre le marché.`:'Laisse le prix manuel vide pour utiliser le prix Cardmarket dès qu’il est disponible.'}</p>
+      <div class="full" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="submit">${editing?'Enregistrer':'Ajouter au classeur'}</button>${editing?'<button class="btn" type="button" data-act="cancel">Annuler</button>':''}</div>
+    </form>`;
+}
+$('#shBody').addEventListener('click', e=>{
+  const sb=e.target.closest('.seg button'); if(sb){ keepForm(); form[sb.parentElement.dataset.f]=sb.dataset.v; renderSheet(); return; }
+  const st=e.target.closest('[data-step]'); if(st){ form.qty=Math.max(1,Math.min(999,form.qty+ +st.dataset.step)); $('#qtyOut').textContent=form.qty; return; }
+  const a=e.target.closest('[data-act]'); if(!a) return; const id=a.dataset.id;
+  if(a.dataset.act==='edit'){ openSheet(openId,id); }
+  if(a.dataset.act==='askdel'){ keepForm(); confirmDel=id; renderSheet(); }
+  if(a.dataset.act==='nodel'){ keepForm(); confirmDel=null; renderSheet(); }
+  if(a.dataset.act==='cancel'){ openSheet(openId); }
+  if(a.dataset.act==='del'){ entries.delete(id); saveEntries(); confirmDel=null; if(editing===id) editing=null; toast('Carte retirée du classeur'); recompute(); }
+});
+$('#shBody').addEventListener('submit', e=>{
+  e.preventDefault(); keepForm();
+  const c=byId.get(openId), pv=parseFloat(String(form.price).replace(',','.'));
+  const data={card:c.id, variant:form.variant, cond:form.cond, qty:form.qty, price:isFinite(pv)&&pv>=0?Math.round(pv*100)/100:null, box:form.box.trim(), spot:form.spot.trim()};
+  let id=editing;
+  if(!id){
+    const same=[...entries].find(([,x])=>x.card===data.card&&x.variant===data.variant&&x.cond===data.cond&&(x.box||'')===data.box&&(x.spot||'')===data.spot);
+    if(same){ id=same[0]; data.qty+=+same[1].qty||0; if(data.price==null) data.price=same[1].price??null; data.added=same[1].added; }
+    else id='e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  } else data.added=entries.get(id)?.added;
+  data.added=data.added||Date.now();
+  entries.set(id,data); saveEntries(); if(data.box) LS.set('classeur-fr-lastbox',data.box);
+  toast(editing?'Modifications enregistrées':`Ajoutée : ${c.name} ×${form.qty}${data.box?' · '+data.box:''}`);
+  editing=null; form.qty=1; form.price=''; form.spot='';
+  recompute();
+});
+
+/* ---------- backup ---------- */
+function download(name, text, type){
+  const url=URL.createObjectURL(new Blob([text],{type}));
+  const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+const today=()=>new Date().toISOString().slice(0,10);
+$('#bkSave').onclick=()=>{ download(`classeur-pokemon-${today()}.json`, JSON.stringify({app:'classeur-pokemon',v:1,saved:new Date().toISOString(),entries:Object.fromEntries(entries)},null,1),'application/json'); LS.set(K.backup,Date.now()); showBackup(); toast('Sauvegarde téléchargée'); };
+$('#bkCsv').onclick=()=>{
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const lines=[['Nom','Série','Abréviation','Numéro','Variante','État','Quantité','Rangement','Emplacement','Valeur unitaire (€)','Source du prix','Valeur totale (€)'].map(q).join(';')];
+  for(const e of entries.values()){ const c=byId.get(e.card); if(!c) continue; const u=unitValue(e);
+    lines.push([c.name,c.set.name,c.set.code||'',numOf(c),VAR_FR[e.variant]||e.variant,e.cond,e.qty,e.box||'',e.spot||'',u.v!=null?u.v.toFixed(2).replace('.',','):'',u.src,u.v!=null?(u.v*e.qty).toFixed(2).replace('.',','):''].map(q).join(';')); }
+  download(`classeur-pokemon-${today()}.csv`, '﻿'+lines.join('\r\n'), 'text/csv'); toast('Export tableur téléchargé');
+};
+$('#bkLoad').onclick=()=>$('#bkFile').click();
+$('#bkFile').onchange=async ev=>{
+  const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
+  let data; try{ data=JSON.parse(await f.text()); }catch(e){ toast('Ce fichier n’est pas une sauvegarde du classeur'); return; }
+  if(!data||data.app!=='classeur-pokemon'||typeof data.entries!=='object'){ toast('Ce fichier n’est pas une sauvegarde du classeur'); return; }
+  const n=Object.keys(data.entries).length;
+  const bn=$('#restoreBanner');
+  bn.innerHTML=`<div class="banner"><span>Sauvegarde du ${new Date(data.saved).toLocaleDateString('fr-FR')} : ${n} ligne${n>1?'s':''}. Ta collection actuelle en a ${entries.size}.</span><span class="chips"><button class="btn small primary" id="rsMerge">Fusionner</button><button class="btn small danger" id="rsReplace">Remplacer</button><button class="btn small" id="rsCancel">Annuler</button></span></div>`;
+  $('#rsCancel').onclick=()=>bn.innerHTML='';
+  $('#rsMerge').onclick=()=>{ for(const [k,v] of Object.entries(data.entries)) entries.set(k,v); done('Sauvegarde fusionnée'); };
+  $('#rsReplace').onclick=()=>{ entries=new Map(Object.entries(data.entries)); done('Collection remplacée par la sauvegarde'); };
+  function done(msg){ bn.innerHTML=''; saveEntries(); toast(msg); recompute(); refreshOwnedPrices(); }
+};
+function showBackup(){
+  const t=LS.get(K.backup,0), el=$('#backupinfo');
+  if(!storageOk){ el.innerHTML='<span class="warn">Ce navigateur bloque l’enregistrement : pense à sauvegarder avant de fermer.</span>'; return; }
+  if(!entries.size){ el.textContent=''; return; }
+  const d=t?Math.floor((Date.now()-t)/DAY):null;
+  el.innerHTML = d==null ? '<span class="warn">Pas encore de sauvegarde</span>' : d>=14 ? `<span class="warn">Dernière sauvegarde il y a ${d} jours</span>` : `Sauvegardé ${d===0?'aujourd’hui':'il y a '+d+' j'}`;
+}
+
+let toastT; function toast(m){ const t=$('#toast'); t.textContent=m; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,2600); }
+
+/* ---------- events ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchView(t.dataset.view));
+let deb; $('#q').addEventListener('input',()=>{ clearTimeout(deb); deb=setTimeout(()=>{state.shown=60;renderCatalog();},140); });
+['#fSet','#fType','#fSort'].forEach(s=>$(s).onchange=()=>{ state.shown=60; renderCatalog(); });
+document.querySelectorAll('[data-own]').forEach(b=>b.onclick=()=>{ state.own=b.dataset.own; state.shown=60; document.querySelectorAll('[data-own]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); renderCatalog(); });
+$('#moreBtn').onclick=()=>{ state.shown+=120; renderCatalog(); };
+$('#grid').addEventListener('click',e=>{ const s=e.target.closest('.slot'); if(s) openSheet(s.dataset.id); });
+$('#colList').addEventListener('click',e=>{ const s=e.target.closest('.item'); if(s) openSheet(s.dataset.id, s.dataset.entry); });
+$('#colList').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const s=e.target.closest('.item'); if(s) openSheet(s.dataset.id, s.dataset.entry); } });
+$('#cq').addEventListener('input',renderCollection); $('#cSort').onchange=renderCollection; $('#cBox').onchange=renderCollection;
+$('#pRef').value=cfg.ref; $('#pCond').checked=cfg.cond;
+$('#pRef').onchange=()=>{ cfg.ref=$('#pRef').value; LS.set(K.cfg,cfg); recompute(); };
+$('#pCond').onchange=()=>{ cfg.cond=$('#pCond').checked; LS.set(K.cfg,cfg); recompute(); };
+$('#setList').addEventListener('click',e=>{ const s=e.target.closest('.setrow'); if(!s) return; $('#fSet').value=s.dataset.set; $('#q').value=''; $('#fType').value=''; state.shown=400; switchView('cat'); window.scrollTo({top:0}); });
+$('#sStarted').onclick=()=>setSetFilter('started'); $('#sAllSets').onclick=()=>setSetFilter('all');
+$('#scrim').onclick=closeSheet; $('#shClose').onclick=closeSheet;
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(!$('#cam').hidden) return closeCam(); if(openId) closeSheet(); });
+
+fillFilters(); updateCatInfo(); recompute(); showBackup(); showPriceStatus();
+syncLive();
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
