@@ -1,0 +1,65 @@
+name: Déployer le classeur
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1"   # every Monday at 04:17 UTC: new sets, new cards and their visual fingerprints
+  workflow_dispatch:        # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Télécharger la base de cartes TCGdex
+        run: git clone --depth 1 https://github.com/tcgdex/cards-database.git tcgdex
+
+      - name: Construire le catalogue et la page
+        run: node scripts/build.js
+
+      - name: Installer l'outil de lecture d'images
+        run: npm install --no-save --no-audit --no-fund sharp
+
+      - name: Reprendre les empreintes déjà calculées
+        uses: actions/cache@v4
+        with:
+          path: vision-cache
+          key: vision-${{ github.run_id }}
+          restore-keys: vision-
+
+      - name: Calculer les empreintes visuelles des cartes
+        run: node scripts/vision-index.js
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Mettre en ligne
+        id: deployment
+        uses: actions/deploy-pages@v5
