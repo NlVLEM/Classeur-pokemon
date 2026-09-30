@@ -209,9 +209,17 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
 /* camera overlay: deliberately always dark, like a viewfinder */
 .cam{position:fixed;inset:0;z-index:40;background:#000;color:#fff;overflow:hidden}
 .cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.cam-guide{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);height:min(62vh,calc((100vw - 40px)*88/63));aspect-ratio:63/88;max-width:calc(100vw - 40px);border:3px solid rgba(255,255,255,.95);border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.5)}
-.cam-band{position:absolute;left:0;right:0;bottom:0;height:14%;border-top:2px dashed rgba(255,214,70,.95);background:rgba(255,214,70,.12);display:flex;align-items:flex-end;justify-content:center}
-.cam-band span{font:600 11px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;color:#FFD646;padding:0 0 4px}
+.cam-guide{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);height:min(62vh,calc((100vw - 40px)*88/63));aspect-ratio:63/88;max-width:calc(100vw - 40px);border:2px dashed rgba(255,255,255,.7);border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
+.cam-ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.cam-tr{display:flex;gap:8px}
+.cam-diag{position:absolute;right:12px;top:calc(58px + env(safe-area-inset-top,0px));width:min(330px,calc(100vw - 24px));background:rgba(12,14,28,.9);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px;display:grid;gap:8px;font-size:12px}
+.dg-row{display:flex;gap:10px;align-items:flex-start}
+.dg-flat canvas{width:72px;height:auto;border-radius:4px;display:block;border:1px solid rgba(255,255,255,.3)}
+.dg-top{display:flex;gap:6px;flex:1;min-width:0}
+.dg-c{display:grid;gap:2px;justify-items:center;min-width:0;flex:1}
+.dg-c .thumb{width:100%;max-width:60px}
+.dg-c span{font-family:var(--mono);font-size:11px}.dg-c b{font-size:12px;color:#FFD646}
+.dg-stats{color:#c8cce0;line-height:1.35}
 .cam-top{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px}
 .cam-set{font:600 14px/1.2 var(--display);text-align:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cam-btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;padding:7px 14px;font-weight:600;cursor:pointer}
@@ -344,8 +352,10 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
 </aside>
 <div class="cam" id="cam" hidden role="dialog" aria-label="Scanner avec la caméra">
   <video id="camVideo" playsinline muted autoplay></video>
-  <div class="cam-guide" id="camGuide"><div class="cam-band"><span>numéro ici</span></div></div>
-  <div class="cam-top"><button class="cam-btn" type="button" id="camClose">Fermer</button><span id="camSet" class="cam-set"></span><button class="cam-btn" type="button" id="camTorch" aria-pressed="false" hidden>Lampe</button></div>
+  <div class="cam-guide" id="camGuide"></div>
+  <canvas class="cam-ov" id="camOverlay"></canvas>
+  <div class="cam-top"><button class="cam-btn" type="button" id="camClose">Fermer</button><span id="camSet" class="cam-set"></span><span class="cam-tr"><button class="cam-btn" type="button" id="camTorch" aria-pressed="false" hidden>Lampe</button><button class="cam-btn" type="button" id="camDiagBtn" aria-pressed="false">Diagnostic</button></span></div>
+  <div class="cam-diag" id="camDiag" hidden><div class="dg-row"><div class="dg-flat" title="Carte redressée vue par l’app"></div><div class="dg-top"></div></div><div class="dg-stats"></div></div>
   <div class="cam-bottom">
     <div class="cam-row"><div class="seg" id="camVar"></div><label class="cam-auto"><input type="checkbox" id="camAuto"> Ajout auto</label></div>
     <div class="cam-status" id="camStatus"></div>
@@ -421,7 +431,7 @@ function fillFilters(){
   sel.innerHTML=html; if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
   const ss=$('#scSet'); if(ss){ ss.innerHTML=html.replace('<option value="">Toutes les séries</option>',''); const s=scanSet&&scanSet(); if(s) ss.value=String(s.i); }
 }
-function updateCatInfo(){ $('#catinfo').textContent = `${cards.length.toLocaleString('fr-FR')} cartes françaises · ${sets.length} séries · du Set de Base à aujourd’hui`; }
+function updateCatInfo(){ $('#catinfo').textContent = `${cards.length.toLocaleString('fr-FR')} cartes françaises · ${sets.length} séries · du Set de Base à aujourd’hui${CAT.built?' · catalogue du '+new Date(CAT.built).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}):''}`; }
 
 /* ---------- live data from TCGdex ---------- */
 let online = false;
@@ -770,188 +780,275 @@ document.querySelectorAll('[data-sown]').forEach(b=>b.onclick=()=>{ scan.own=b.d
 $('#scBox').value=scan.box||''; $('#scSpot').value=scan.spot||''; fillScanControls();
 
 
-/* ---------- camera scan: frame stability + OCR of the card number ---------- */
-const TESS_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-const cam = { stream:null, worker:null, loading:null, timer:null, prev:null, stable:0, busy:false, armed:true, fails:0,
-  votes:new Map(), pending:null, auto: LS.get('classeur-fr-autoadd', true), track:null, torch:false };
+/* ---------- vision: find the card, flatten it, compare its artwork with the scans ---------- */
+const Vision = (() => {
+  const RW = 100, RH = 140;             // flattened card size used for descriptors (63:88)
+  const ART = [0.08, 0.11, 0.92, 0.52]; // illustration window (x0,y0,x1,y1), fractions of the card
 
-function loadScript(src){ return new Promise((ok,ko)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>ko(new Error('script')); document.head.appendChild(s); }); }
-function ocrWorker(){
-  if (cam.worker) return Promise.resolve(cam.worker);
-  if (!cam.loading) cam.loading = (async()=>{
-    if (!window.Tesseract) await loadScript(TESS_URL);
-    const w = await Tesseract.createWorker('eng', 1);
-    await w.setParameters({ tessedit_pageseg_mode:'11', tessedit_char_whitelist:'0123456789/ABCDEFGHIJKLMNOPQRSTUVWXYZ' });
-    cam.worker = w; return w;
-  })().catch(e=>{ cam.loading=null; throw e; });
-  return cam.loading;
-}
-
-/* image helpers: src is a <video> or an ImageBitmap; R is the card rectangle in source pixels */
-function grayOf(ctx, w, h){ const p=ctx.getImageData(0,0,w,h).data, g=new Float32Array(w*h); for(let i=0;i<g.length;i++) g[i]=0.299*p[i*4]+0.587*p[i*4+1]+0.114*p[i*4+2]; return g; }
-const smallC = document.createElement('canvas'), smallX = smallC.getContext('2d', {willReadFrequently:true});
-function sample(src, R){ smallC.width=36; smallC.height=50; smallX.drawImage(src, R.x, R.y, R.w, R.h, 0, 0, 36, 50); return grayOf(smallX, 36, 50); }
-function meanAbsDiff(a,b){ let s=0; for(let i=0;i<a.length;i++) s+=Math.abs(a[i]-b[i]); return s/a.length; }
-function stdev(a){ let m=0; for(const v of a) m+=v; m/=a.length; let s=0; for(const v of a) s+=(v-m)**2; return Math.sqrt(s/a.length); }
-function cropBand(src, R, x0, x1, y0, y1, mode){
-  const sx=R.x+R.w*x0, sw=R.w*(x1-x0), sy=R.y+R.h*y0, sh=R.h*(y1-y0);
-  const S=Math.max(1, Math.min(4, 1300/sw));
-  const c=document.createElement('canvas'); c.width=Math.round(sw*S); c.height=Math.round(sh*S);
-  const x=c.getContext('2d', {willReadFrequently:true}); x.imageSmoothingQuality='high';
-  x.drawImage(src, sx, sy, sw, sh, 0, 0, c.width, c.height);
-  const w=c.width, h=c.height, d=x.getImageData(0,0,w,h), p=d.data, g=grayOf(x,w,h);
-  if (mode==='adapt'){ // local-mean (Bradley) threshold through an integral image: robust to glare and coloured borders
-    const I=new Float64Array((w+1)*(h+1));
-    for(let yy=0;yy<h;yy++){ let rs=0; for(let xx=0;xx<w;xx++){ rs+=g[yy*w+xx]; I[(yy+1)*(w+1)+xx+1]=I[yy*(w+1)+xx+1]+rs; } }
-    const r=Math.max(8, Math.round(h*0.35));
-    for(let yy=0;yy<h;yy++) for(let xx=0;xx<w;xx++){
-      const a=Math.max(0,xx-r), b=Math.min(w,xx+r+1), cc=Math.max(0,yy-r), dd=Math.min(h,yy+r+1);
-      const s=I[dd*(w+1)+b]-I[cc*(w+1)+b]-I[dd*(w+1)+a]+I[cc*(w+1)+a], m=s/((b-a)*(dd-cc)), i=yy*w+xx;
-      const v = g[i] < m*0.85 ? 0 : 255; p[i*4]=p[i*4+1]=p[i*4+2]=v;
+  // colour Sobel gradients (one pair per RGB channel), so a yellow border on a grey table still shows up
+  function colorGrad(img){
+    const w=img.width, h=img.height, d=img.data, n=w*h, GX=[0,1,2].map(()=>new Float32Array(n)), GY=[0,1,2].map(()=>new Float32Array(n)), W4=w*4;
+    for(let k=0;k<3;k++){ const gx=GX[k], gy=GY[k];
+      for(let y=1;y<h-1;y++) for(let x=1;x<w-1;x++){ const i=y*w+x, p=i*4+k;
+        const a=d[p-W4-4], b=d[p-W4], c=d[p-W4+4], dd=d[p-4], f=d[p+4], kk=d[p+W4-4], l=d[p+W4], m=d[p+W4+4];
+        gx[i]=(c+2*f+m)-(a+2*dd+kk); gy[i]=(kk+2*l+m)-(a+2*b+c); } }
+    return {GX, GY, w, h};
+  }
+  // mean signed gradient along a line (x = a + b(t - c) for vertical sides, y = a + b(t - c) for horizontal ones)
+  function lineScore(G3,w,h,vertical,a,b,c,T0,T1){
+    let s0=0,s1=0,s2=0,n=0; const lim=vertical?w-1:h-1;
+    for(let t=T0;t<T1;t+=2){ const q=Math.round(a+b*(t-c)); if(q<1||q>=lim) continue; const i=vertical?t*w+q:q*w+t; s0+=G3[0][i]; s1+=G3[1][i]; s2+=G3[2][i]; n++; }
+    return n?Math.sqrt(s0*s0+s1*s1+s2*s2)/n:0;
+  }
+  // restricted Hough transform: best few straight edges near the expected side of the card
+  function sideLines(G3,w,h,vertical,pos,span,from,to,K){
+    const slopes=[-0.12,-0.09,-0.06,-0.03,0,0.03,0.06,0.09,0.12], c=(from+to)/2;
+    const lo=Math.max(2,Math.round(pos-span)), hi=Math.min((vertical?w:h)-3,Math.round(pos+span)), cand=[];
+    const T0=Math.max(1,Math.round(from)), T1=Math.min(vertical?h-1:w-1,Math.round(to));
+    for(const b of slopes) for(let a=lo;a<=hi;a++) cand.push({a,b,c,T0,T1,score:lineScore(G3,w,h,vertical,a,b,c,T0,T1)});
+    cand.sort((x,y)=>y.score-x.score);
+    const med=(cand[cand.length>>1]&&cand[cand.length>>1].score)||1e-6, out=[];
+    for(const L of cand){ if(out.every(o=>Math.abs(o.a-L.a)>3)) out.push(L); if(out.length>=K) break; }
+    out.forEach(o=>o.rel=o.score/med); return out;
+  }
+  function refine(G3,w,h,vertical,L){ let best=L; for(let da=-3;da<=3;da+=0.5) for(let db=-0.02;db<=0.021;db+=0.01){ const s=lineScore(G3,w,h,vertical,L.a+da,L.b+db,L.c,L.T0,L.T1); if(s>best.score) best={...L,a:L.a+da,b:L.b+db,score:s}; } return best; }
+  function cross(Vl,Hl){ const x=(Vl.a + Vl.b*(Hl.a - Hl.b*Hl.c - Vl.c))/(1 - Vl.b*Hl.b); return [x, Hl.a + Hl.b*(x - Hl.c)]; }
+  const dist=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1]);
+  // pick the 4 edges that together look most like a card: strong, card-shaped (63:88), parallel, as large as possible
+  function locate(img, g, G){
+    const {GX,GY,w,h}=G||colorGrad(img), K=7, sx=g.w*0.22, sy=g.h*0.16;
+    const Ls=sideLines(GX,w,h,true,g.x,sx,g.y+g.h*0.1,g.y+g.h*0.9,K), Rs=sideLines(GX,w,h,true,g.x+g.w,sx,g.y+g.h*0.1,g.y+g.h*0.9,K);
+    const Ts=sideLines(GY,w,h,false,g.y,sy,g.x+g.w*0.1,g.x+g.w*0.9,K), Bs=sideLines(GY,w,h,false,g.y+g.h,sy,g.x+g.w*0.1,g.x+g.w*0.9,K);
+    if(!Ls.length||!Rs.length||!Ts.length||!Bs.length) return {found:false};
+    const mL=Ls[0].score||1, mR=Rs[0].score||1, mT=Ts[0].score||1, mB=Bs[0].score||1, gA=g.w*g.h;
+    let best=null;
+    for(const L of Ls) for(const R of Rs){ if(R.a-L.a<g.w*0.6) continue;
+      for(const T of Ts) for(const B of Bs){ if(B.a-T.a<g.h*0.6) continue;
+        const q=[cross(L,T),cross(R,T),cross(R,B),cross(L,B)];
+        const ww=(dist(q[0],q[1])+dist(q[3],q[2]))/2, hh=(dist(q[0],q[3])+dist(q[1],q[2]))/2, dev=Math.abs(ww/hh-0.716)/0.716;
+        if(dev>0.1||ww<g.w*0.65||ww>g.w*1.35) continue;
+        const edge=(L.score/mL+R.score/mR+T.score/mT+B.score/mB)/4, par=Math.abs(L.b-R.b)+Math.abs(T.b-B.b);
+        const sc=edge-3*dev-par+1.2*Math.min(ww*hh/gA,1.3);
+        if(!best||sc>best.sc) best={sc,L,R,T,B,rel:Math.min(L.rel,R.rel,T.rel,B.rel)};
+      } }
+    if(!best||best.rel<1.8) return {found:false};
+    const L=refine(GX,w,h,true,best.L), R=refine(GX,w,h,true,best.R), T=refine(GY,w,h,false,best.T), B=refine(GY,w,h,false,best.B);
+    return {found:true, quad:[cross(L,T),cross(R,T),cross(R,B),cross(L,B)], strength:best.rel};
+  }
+  // the strongest edge is often the inner frame: look a little further out for the real outer border
+  function snapOut(G, quad){
+    const {GX,GY,w,h}=G, q=quad, hh=dist(q[3],q[0]), lines=[];
+    const sides=[{i:[0,3],v:true,out:-1},{i:[1,2],v:true,out:1},{i:[0,1],v:false,out:-1},{i:[3,2],v:false,out:1}];
+    for(const S of sides){
+      const p=q[S.i[0]], r=q[S.i[1]]; let a,b,c,T0,T1;
+      if(S.v){ c=(p[1]+r[1])/2; b=(r[0]-p[0])/((r[1]-p[1])||1); a=(p[0]+r[0])/2; T0=Math.round(Math.min(p[1],r[1])+0.1*hh); T1=Math.round(Math.max(p[1],r[1])-0.1*hh); }
+      else { c=(p[0]+r[0])/2; b=(r[1]-p[1])/((r[0]-p[0])||1); a=(p[1]+r[1])/2; T0=Math.round(Math.min(p[0],r[0])+0.07*hh); T1=Math.round(Math.max(p[0],r[0])-0.07*hh); }
+      const G3=S.v?GX:GY, s0=lineScore(G3,w,h,S.v,a,b,c,T0,T1), maxD=Math.round(0.075*hh), sc=[];
+      for(let dd=0;dd<=maxD+1;dd++) sc.push(lineScore(G3,w,h,S.v,a+S.out*dd,b,c,T0,T1));
+      let bestD=0, bestS=-1; for(let dd=3;dd<=maxD;dd++) if(sc[dd]>=sc[dd-1]&&sc[dd]>=sc[dd+1]&&sc[dd]>=0.3*s0&&sc[dd]>bestS){ bestS=sc[dd]; bestD=dd; }
+      lines.push({a:a+S.out*bestD,b,c});
     }
-  } else { // grey + contrast stretch
-    let lo=255, hi=0; for(const v of g){ if(v<lo) lo=v; if(v>hi) hi=v; } const k=255/Math.max(1,hi-lo);
-    for(let i=0;i<g.length;i++){ const v=(g[i]-lo)*k; p[i*4]=p[i*4+1]=p[i*4+2]=v; }
+    const [L,R,T,B]=lines; return [cross(L,T),cross(R,T),cross(R,B),cross(L,B)];
   }
-  x.putImageData(d,0,0); return c;
-}
-
-/* text -> card */
-function fixDigits(s){ return s.replace(/O/g,'0').replace(/[IL]/g,'1').replace(/S/g,'5').replace(/B/g,'8').replace(/Z/g,'2'); }
-function matchText(txt){
-  const T = (' '+txt.toUpperCase().replace(/[^A-Z0-9\/]+/g,' ')+' ');
-  const letters = T.replace(/[^A-Z]/g,''), codes = { has:k => !!k && k.length>=3 && letters.includes(k) };
-  const re = /([A-Z]{0,4}[0-9OIL]{1,3}[A-Z]?)\s?\/\s?([0-9OILSBZ]{2,3})/g;
-  let m, best=null; const cur=scanSet();
-  while((m=re.exec(T))){
-    const tot = parseInt(fixDigits(m[2]),10); if(!tot) continue;
-    const raw = m[1];
-    const pre = raw.match(/^[A-Z]*/)[0], dig = fixDigits(raw.slice(pre.length).replace(/[A-Z]$/,'')), suf = /[A-Z]$/.test(raw.slice(pre.length)) ? raw.slice(-1) : '';
-    const tries = [pre+dig+suf, dig+suf, dig];
-    const pool = [cur, ...sets.filter(s=>s!==cur && (codes.has(s.code) || (s.oc && codes.has(s.oc)) || s.total===tot))];
-    for (const s of pool){
-      if (!s) continue;
-      let score = 0; if (s.total===tot) score+=3; if (codes.has(s.code) || (s.oc&&codes.has(s.oc))) score+=3; if (s===cur) score+=1;
-      if (score<3) continue;
-      const c = cards.find(x=>x.set===s && tries.some(t=>lidKey(x.lid)===lidKey(t)));
-      if (c && (!best || score>best.score)) best = {card:c.id, score, text:dig+'/'+tot};
+  // homography mapping the output rectangle onto the quad (inverse warping)
+  function homography(quad, W, H){
+    const src=[[0,0],[W,0],[W,H],[0,H]], A=[], bv=[];
+    for(let i=0;i<4;i++){ const [u,v]=src[i], [x,y]=quad[i]; A.push([u,v,1,0,0,0,-u*x,-v*x]); bv.push(x); A.push([0,0,0,u,v,1,-u*y,-v*y]); bv.push(y); }
+    for(let c=0;c<8;c++){ let p=c; for(let r=c+1;r<8;r++) if(Math.abs(A[r][c])>Math.abs(A[p][c])) p=r;
+      [A[c],A[p]]=[A[p],A[c]]; [bv[c],bv[p]]=[bv[p],bv[c]];
+      for(let r=0;r<8;r++){ if(r===c) continue; const f=A[r][c]/A[c][c]; for(let k=c;k<8;k++) A[r][k]-=f*A[c][k]; bv[r]-=f*bv[c]; } }
+    const hv=bv.map((v,i)=>v/A[i][i]); return [hv[0],hv[1],hv[2],hv[3],hv[4],hv[5],hv[6],hv[7],1];
+  }
+  // flatten the card: 2x supersampled bilinear warp, then box filter to RW x RH
+  function warp(img, quad){
+    const S=2, W=RW*S, H=RH*S, Hm=homography(quad,W,H), w=img.width, h=img.height, d=img.data, big=new Float32Array(W*H*3);
+    for(let v=0;v<H;v++) for(let u=0;u<W;u++){
+      const z=Hm[6]*u+Hm[7]*v+1, x=(Hm[0]*u+Hm[1]*v+Hm[2])/z, y=(Hm[3]*u+Hm[4]*v+Hm[5])/z;
+      const x0=Math.max(0,Math.min(w-2,Math.floor(x))), y0=Math.max(0,Math.min(h-2,Math.floor(y))), fx=Math.min(1,Math.max(0,x-x0)), fy=Math.min(1,Math.max(0,y-y0));
+      const i00=(y0*w+x0)*4, i10=i00+4, i01=i00+w*4, i11=i01+4, o=(v*W+u)*3;
+      for(let k=0;k<3;k++) big[o+k]=(d[i00+k]*(1-fx)+d[i10+k]*fx)*(1-fy)+(d[i01+k]*(1-fx)+d[i11+k]*fx)*fy;
     }
+    const out=new Float32Array(RW*RH*3);
+    for(let v=0;v<RH;v++) for(let u=0;u<RW;u++) for(let k=0;k<3;k++){ const a=((2*v)*W+2*u)*3+k; out[(v*RW+u)*3+k]=(big[a]+big[a+3]+big[a+W*3]+big[a+W*3+3])/4; }
+    return out;
   }
-  return best;
-}
-async function readSource(src, R, maxReads){
-  const w = await ocrWorker(); const found=[];
-  const crops = [[0,0.56,'gray'],[0,0.56,'adapt'],[0.44,1,'gray'],[0.44,1,'adapt']];
-  for (const [x0,x1,mode] of crops.slice(0, maxReads||4)){
-    const txt = (await w.recognize(cropBand(src, R, x0, x1, 0.86, 1, mode))).data.text;
-    const r = matchText(txt);
-    if (r){ found.push(r); if (found.filter(f=>f.card===r.card).length>=2) break; }
+  function fromImage(el){ // reference scan: the whole picture is the card
+    const c=document.createElement('canvas'); c.width=RW; c.height=RH; const x=c.getContext('2d',{willReadFrequently:true});
+    x.fillStyle='#fff'; x.fillRect(0,0,RW,RH); x.imageSmoothingQuality='high'; x.drawImage(el,0,0,RW,RH);
+    const d=x.getImageData(0,0,RW,RH).data, out=new Float32Array(RW*RH*3);
+    for(let i=0;i<RW*RH;i++){ out[i*3]=d[i*4]; out[i*3+1]=d[i*4+1]; out[i*3+2]=d[i*4+2]; }
+    return out;
   }
-  return found;
-}
+  function rotate180(rgb){ const n=RW*RH, o=new Float32Array(n*3); for(let i=0;i<n;i++){ const j=n-1-i; o[i*3]=rgb[j*3]; o[i*3+1]=rgb[j*3+1]; o[i*3+2]=rgb[j*3+2]; } return o; }
+  function cells(rgb,ch,x0,y0,x1,y1,ow,oh){
+    const out=new Float32Array(ow*oh), X0=x0*RW, Y0=y0*RH, cw=(x1-x0)*RW/ow, chh=(y1-y0)*RH/oh;
+    for(let j=0;j<oh;j++) for(let i=0;i<ow;i++){
+      let s=0,n=0; const xa=Math.floor(X0+i*cw), xb=Math.max(xa+1,Math.floor(X0+(i+1)*cw)), ya=Math.floor(Y0+j*chh), yb=Math.max(ya+1,Math.floor(Y0+(j+1)*chh));
+      for(let y=ya;y<yb&&y<RH;y++) for(let x=xa;x<xb&&x<RW;x++){ const p=(y*RW+x)*3; s+= ch<0 ? 0.299*rgb[p]+0.587*rgb[p+1]+0.114*rgb[p+2] : rgb[p+ch]; n++; }
+      out[j*ow+i]=n?s/n:0;
+    }
+    return out;
+  }
+  function unit(v){ let m=0; for(const x of v) m+=x; m/=v.length; let s=0; for(let i=0;i<v.length;i++){ v[i]-=m; s+=v[i]*v[i]; } s=Math.sqrt(s)||1; for(let i=0;i<v.length;i++) v[i]/=s; return v; }
+  // descriptor: illustration structure (grey), whole-card layout, white-balanced colour layout. Normalised, so light changes cancel out
+  function describe(rgb){
+    const art=unit(cells(rgb,-1,...ART,32,20)), full=unit(cells(rgb,-1,0,0,1,1,20,28));
+    const mr=cells(rgb,0,0,0,1,1,1,1)[0]||1, mg=cells(rgb,1,0,0,1,1,1,1)[0]||1, mb=cells(rgb,2,0,0,1,1,1,1)[0]||1;
+    const col=new Float32Array(48), R=cells(rgb,0,...ART,4,4), Gc=cells(rgb,1,...ART,4,4), Bc=cells(rgb,2,...ART,4,4);
+    for(let i=0;i<16;i++){ col[i]=R[i]/mr; col[16+i]=Gc[i]/mg; col[32+i]=Bc[i]/mb; }
+    return {art, full, col:unit(col)};
+  }
+  function dot(a,b){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
+  function similarity(q,r){ return 0.55*dot(q.art,r.art)+0.25*dot(q.full,r.full)+0.20*dot(q.col,r.col); }
+  function rank(rgb, refs){ const q=describe(rgb), q2=describe(rotate180(rgb)); return refs.map(r=>({id:r.id, s:Math.max(similarity(q,r.d),similarity(q2,r.d))})).sort((a,b)=>b.s-a.s); }
+  function rectQuad(g,s,dx,dy){ const w=g.w*s,h=g.h*s,x=g.x+g.w/2-w/2+dx*g.w,y=g.y+g.h/2-h/2+dy*g.h; return [[x,y],[x+w,y],[x+w,y+h],[x,y+h]]; }
+  // analysis by synthesis: try the detected edges and a few guide alignments, keep the most convincing match
+  function identify(img, g, refs){
+    const G=colorGrad(img), L=locate(img,g,G), hyps=[];
+    if(L.found){ hyps.push({q:snapOut(G,L.quad),k:'bords'}); hyps.push({q:L.quad,k:'bords'}); }
+    for(const [s,dx,dy] of [[1,0,0],[0.94,0,0],[1.06,0,0],[1,-0.04,0],[1,0.04,0],[1,0,-0.03],[1,0,0.03]]) hyps.push({q:rectQuad(g,s,dx,dy),k:'cadre'});
+    let best=null;
+    for(const h of hyps){ const rgb=warp(img,h.q), r=rank(rgb,refs); if(!best||r[0].s>best.r[0].s) best={...h,r,rgb}; }
+    const r=best.r; return {id:r[0].id, s:r[0].s, margin:r[0].s-(r[1]?r[1].s:0), top:r.slice(0,3), quad:best.q, how:best.k, edges:L.found, rgb:best.rgb};
+  }
+  function toImageData(rgb){ const d=new ImageData(RW,RH); for(let i=0;i<RW*RH;i++){ d.data[i*4]=rgb[i*3]; d.data[i*4+1]=rgb[i*3+1]; d.data[i*4+2]=rgb[i*3+2]; d.data[i*4+3]=255; } return d; }
+  return {RW, RH, fromImage, describe, identify, toImageData};
+})();
 
-/* camera overlay */
+/* ---------- camera scan: detect the card, flatten it, match it against the scans of the chosen set ---------- */
+const ACCEPT_S = 0.45, ACCEPT_M = 0.10, VOTES = 3;
+const cam = { stream:null, timer:null, busy:false, armed:true, hist:[], pending:null, auto: LS.get('classeur-fr-autoadd', true),
+  track:null, torch:false, lastAdded:null, away:0, diag: LS.get('classeur-fr-diag', false), refs:null, diagKey:'' };
+const refCache = new Map();
+async function loadRefs(set, onProgress){
+  if (refCache.has(set.id)) return refCache.get(set.id);
+  const list = cards.filter(c=>c.set===set), refs=[]; let done=0;
+  await pool(list, 6, async c=>{
+    const urls=[...new Set([imgUrl(c,'fr'), imgUrl(c,'en')].filter(Boolean))];
+    for (const u of urls){ try{ const r=await fetch(u+'/low.webp', {mode:'cors'}); if(!r.ok) throw 0; const b=await createImageBitmap(await r.blob()); refs.push({id:c.id, d:Vision.describe(Vision.fromImage(b))}); break; }catch(e){} }
+    done++; if (onProgress) onProgress(done, list.length);
+  });
+  if (refs.length) refCache.set(set.id, refs);
+  return refs;
+}
+const wk=document.createElement('canvas'), wkx=wk.getContext('2d', {willReadFrequently:true});
+function coverMap(){ const v=$('#camVideo'), r=v.getBoundingClientRect(), vw=v.videoWidth||1, vh=v.videoHeight||1, s=Math.max(r.width/vw, r.height/vh); return {s, ox:(r.width-vw*s)/2, oy:(r.height-vh*s)/2, r}; }
+function frameAndGuide(){
+  const v=$('#camVideo'), vw=v.videoWidth, vh=v.videoHeight, ws=640/Math.max(vw,vh), W=Math.round(vw*ws), H=Math.round(vh*ws);
+  if (wk.width!==W || wk.height!==H){ wk.width=W; wk.height=H; }
+  wkx.drawImage(v,0,0,W,H);
+  const m=coverMap(), gb=$('#camGuide').getBoundingClientRect();
+  const g={x:((gb.left-m.r.left-m.ox)/m.s)*ws, y:((gb.top-m.r.top-m.oy)/m.s)*ws, w:(gb.width/m.s)*ws, h:(gb.height/m.s)*ws};
+  return {img:wkx.getImageData(0,0,W,H), g, ws};
+}
+function drawQuad(q, ws, color){
+  const c=$('#camOverlay'), m=coverMap(), dpr=window.devicePixelRatio||1, W=Math.round(m.r.width*dpr), H=Math.round(m.r.height*dpr);
+  if (c.width!==W || c.height!==H){ c.width=W; c.height=H; }
+  const x=c.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,m.r.width,m.r.height);
+  if (!q) return;
+  x.strokeStyle=color; x.lineWidth=3; x.lineJoin='round'; x.beginPath();
+  q.forEach((p,i)=>{ const X=p[0]/ws*m.s+m.ox, Y=p[1]/ws*m.s+m.oy; if(i) x.lineTo(X,Y); else x.moveTo(X,Y); }); x.closePath(); x.stroke();
+}
+const diagFlat=document.createElement('canvas'); diagFlat.width=Vision.RW; diagFlat.height=Vision.RH;
+function showDiag(r, ms, good){
+  const box=$('#camDiag'); if (box.hidden) return;
+  if (!box.querySelector('.dg-flat canvas')) box.querySelector('.dg-flat').appendChild(diagFlat);
+  diagFlat.getContext('2d').putImageData(Vision.toImageData(r.rgb),0,0);
+  const key=r.top.map(t=>t.id).join('|');
+  if (key!==cam.diagKey){ cam.diagKey=key; box.querySelector('.dg-top').innerHTML=r.top.map(t=>{ const c=byId.get(t.id); return `<div class="dg-c" data-id="${esc(t.id)}"><div class="thumb">${c?thumbImg(c):''}</div><span>${esc(c?c.lid:t.id)}</span><b class="num"></b></div>`; }).join(''); }
+  r.top.forEach(t=>{ const el=box.querySelector(`.dg-c[data-id="${CSS.escape(t.id)}"] b`); if(el) el.textContent=t.s.toFixed(2); });
+  box.querySelector('.dg-stats').textContent=`${good?'Sûr':'Pas sûr'} · score ${r.s.toFixed(2)} (min ${ACCEPT_S}) · écart ${r.margin.toFixed(2)} (min ${ACCEPT_M}) · ${r.edges?'bords trouvés':'bords non trouvés'} · ${r.how} · ${Math.round(ms)} ms`;
+}
 function camStatus(t, cls){ const s=$('#camStatus'); s.textContent=t; s.className='cam-status'+(cls?' '+cls:''); }
-function guideInVideo(){
-  const v=$('#camVideo'), vr=v.getBoundingClientRect(), g=$('#camGuide').getBoundingClientRect();
-  const vw=v.videoWidth, vh=v.videoHeight, s=Math.max(vr.width/vw, vr.height/vh), ox=(vr.width-vw*s)/2, oy=(vr.height-vh*s)/2;
-  const R={x:(g.left-vr.left-ox)/s, y:(g.top-vr.top-oy)/s, w:g.width/s, h:g.height/s};
-  R.x=Math.max(0,R.x); R.y=Math.max(0,R.y); R.w=Math.min(vw-R.x,R.w); R.h=Math.min(vh-R.y,R.h); return R;
-}
 function fillCamVar(){
   $('#camVar').innerHTML=[['n','Normale'],['r','Reverse'],['h','Holo']].map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.variant===k}">${l}</button>`).join('');
-  $('#camSet').textContent = `${scanSet().name}${scanSet().code?' · '+scanSet().code:''}`;
+  const s=scanSet(); $('#camSet').textContent=`${s.name}${s.code?' · '+s.code:''}`;
+  $('#camDiagBtn').setAttribute('aria-pressed', String(cam.diag)); $('#camDiag').hidden=!cam.diag;
 }
 async function openCam(){
   $('#cam').hidden=false; document.body.style.overflow='hidden';
   fillCamVar(); $('#camAuto').checked=cam.auto; $('#camResult').innerHTML=''; $('#camMsg').hidden=true;
-  cam.votes.clear(); cam.armed=true; cam.fails=0; cam.prev=null; cam.stable=0;
-  camStatus('Chargement de la lecture de texte…');
-  const ocr = ocrWorker().catch(()=>null);
+  cam.hist=[]; cam.armed=true; cam.away=0; cam.pending=null; cam.refs=null; cam.diagKey=''; drawQuad(null,1);
+  const set=scanSet();
+  const refsP=loadRefs(set, (d,n)=>{ if(!cam.refs) camStatus(`Préparation des images de la série… ${d}/${n}`, 'busy'); });
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    camMessage('La caméra n’est pas accessible depuis cette page.', 'Sur téléphone, la caméra ne marche que sur une adresse https (voir le mode d’emploi). Tu peux quand même prendre une photo de la carte.');
-    return;
+    camMessage('La caméra n’est pas accessible depuis cette page.', 'Sur téléphone, la caméra ne marche que sur une adresse https. Tu peux quand même prendre une photo de la carte.');
+    cam.refs=await refsP; return;
   }
-  try{
-    cam.stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}});
-  }catch(e){
-    camMessage(e && e.name==='NotAllowedError' ? 'Accès à la caméra refusé.' : 'Impossible d’ouvrir la caméra.', 'Autorise la caméra pour cette page dans les réglages du navigateur, ou prends une photo de la carte à la place.');
-    return;
-  }
+  try{ cam.stream=await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}}}); }
+  catch(e){ camMessage(e&&e.name==='NotAllowedError'?'Accès à la caméra refusé.':'Impossible d’ouvrir la caméra.', 'Autorise la caméra pour cette page dans les réglages du navigateur, ou prends une photo de la carte à la place.'); cam.refs=await refsP; return; }
   const v=$('#camVideo'); v.srcObject=cam.stream; await v.play().catch(()=>{});
-  cam.track = cam.stream.getVideoTracks()[0];
+  cam.track=cam.stream.getVideoTracks()[0];
   try{ const caps=cam.track.getCapabilities?cam.track.getCapabilities():{}; $('#camTorch').hidden=!caps.torch; }catch(e){ $('#camTorch').hidden=true; }
-  const w = await ocr;
-  if (!w){ camMessage('La lecture de texte ne s’est pas chargée.', 'Elle se télécharge une seule fois (environ 5 Mo). Vérifie ta connexion puis rouvre la caméra.'); stopStream(); return; }
-  camStatus('Place une carte dans le cadre, le bas de la carte dans la bande');
-  cam.timer = setInterval(camTick, 220);
+  cam.refs=await refsP;
+  if (!cam.refs.length){ camMessage('Les images de cette série ne se chargent pas.', 'La reconnaissance compare ta carte aux scans de la série : il faut une connexion la première fois. Vérifie ta connexion puis rouvre la caméra.'); stopStream(); return; }
+  camStatus('Place une carte dans le cadre');
+  cam.timer=setInterval(camTick, 160);
 }
 function camMessage(title, text){
   $('#camMsg').hidden=false;
   $('#camMsg').innerHTML=`<b>${esc(title)}</b><p>${esc(text)}</p><div class="chips" style="justify-content:center"><button class="btn primary" type="button" id="camPhotoBtn">Prendre une photo</button><button class="btn" type="button" data-camclose>Fermer</button></div>`;
-  $('#camPhotoBtn').onclick=()=>$('#camPhoto').click();
-  camStatus('');
+  $('#camPhotoBtn').onclick=()=>$('#camPhoto').click(); camStatus('');
 }
 function stopStream(){ clearInterval(cam.timer); cam.timer=null; if(cam.stream){ cam.stream.getTracks().forEach(t=>t.stop()); cam.stream=null; } }
 function closeCam(){ stopStream(); $('#cam').hidden=true; document.body.style.overflow=''; renderScan(); }
 function camTick(){
-  const v=$('#camVideo'); if (!v.videoWidth || cam.busy) return;
-  const R=guideInVideo(), sm=sample(v,R);
-  const motion = cam.prev ? meanAbsDiff(sm, cam.prev) : 99; cam.prev=sm;
-  if (motion>14){ if(!cam.armed){ cam.armed=true; cam.votes.clear(); } cam.stable=0; if(!cam.pending) camStatus('Place une carte dans le cadre, le bas de la carte dans la bande'); return; }
-  cam.stable = motion<4.5 ? cam.stable+1 : 0;
-  if (!cam.armed || cam.stable<2) return;
-  if (stdev(sm)<12){ camStatus('Aucune carte dans le cadre'); return; }
-  camRead(v, R);
-}
-async function camRead(src, R){
-  cam.busy=true; camStatus('Lecture du numéro…', 'busy');
+  const v=$('#camVideo'); if (!v.videoWidth || cam.busy || !cam.refs || !cam.refs.length) return;
+  cam.busy=true;
   try{
-    const found = await readSource(src, R);
-    for (const f of found){ const o=cam.votes.get(f.card)||{n:0,f}; o.n++; if(f.score>o.f.score) o.f=f; cam.votes.set(f.card,o); }
-    const best=[...cam.votes.values()].sort((a,b)=>b.n-a.n||b.f.score-a.f.score)[0];
-    if (!best){ cam.fails++; camStatus(cam.fails>=3 ? 'Numéro illisible : rapproche la carte, évite les reflets, ou tape le numéro' : 'Numéro pas encore lu, ne bouge pas…', 'warn'); return; }
-    const c=byId.get(best.f.card), sure = best.n>=2 && best.f.score>=4;
-    const again = cam.lastAdded && cam.lastAdded.id===c.id && Date.now()-cam.lastAdded.t<10000;
-    if (sure && cam.auto && !again){ camAdd(c); }
-    else { cam.pending=c; showCamResult(c, false, best.f.text); camStatus(sure?'Carte reconnue':'Carte reconnue, à confirmer', ''); }
-  } catch(e){ camStatus('Erreur de lecture, réessaie', 'warn'); }
-  finally { cam.busy=false; }
+    const t0=performance.now(), {img,g,ws}=frameAndGuide(), r=Vision.identify(img,g,cam.refs), ms=performance.now()-t0;
+    const good = r.s>=ACCEPT_S && r.margin>=ACCEPT_M;
+    drawQuad(r.quad, ws, good?'#5BE38F':(r.edges?'#FFD646':'rgba(255,255,255,.4)'));
+    if (cam.diag) showDiag(r, ms, good);
+    cam.hist.push(good?r.id:null); if (cam.hist.length>6) cam.hist.shift();
+    if (!cam.armed){ // after a card: wait until it leaves the frame (or another card comes in)
+      cam.away = (!good || !cam.lastAdded || r.id!==cam.lastAdded.id) ? cam.away+1 : 0;
+      if (cam.away>=3){ cam.armed=true; cam.hist=[]; if(!cam.pending) camStatus('Place la carte suivante'); }
+      return;
+    }
+    const votes=cam.hist.filter(id=>id===r.id).length, c=byId.get(r.id);
+    if (good && votes>=VOTES && c){
+      if (cam.auto) camAdd(c);
+      else { cam.pending=c; cam.armed=false; cam.away=0; cam.lastAdded={id:c.id,t:Date.now()}; showCamResult(c,false); camStatus('Carte reconnue','ok'); }
+    } else if (good && c) camStatus(`Reconnaissance… ${c.name}`, 'busy');
+    else camStatus(r.edges?'Carte repérée : tiens-la bien à plat, sans reflet':'Place une carte dans le cadre');
+  } catch(e){ camStatus('Erreur de traitement, réessaie','warn'); }
+  finally{ cam.busy=false; }
 }
 function camAdd(c){
-  if (c.set!==scanSet()){ scan.set=c.set.id; saveScan(); fillCamVar(); }
-  scanAdd(c); cam.pending=null; cam.armed=false; cam.votes.clear(); cam.fails=0; cam.lastAdded={id:c.id, t:Date.now()};
+  scanAdd(c); cam.pending=null; cam.armed=false; cam.away=0; cam.hist=[]; cam.lastAdded={id:c.id, t:Date.now()};
   showCamResult(c, true); camStatus('Ajoutée ! Retire la carte et passe à la suivante', 'ok');
-  try{ navigator.vibrate && navigator.vibrate(60); }catch(e){}
+  try{ if (navigator.vibrate) navigator.vibrate(60); }catch(e){}
 }
-function showCamResult(c, added, text){
+function showCamResult(c, added){
   const q=ownedById.get(c.id)||0;
-  $('#camResult').innerHTML = `<div class="cam-card"><div class="thumb" style="--tc:${tc(c)}">${thumbImg(c)}</div>
-    <div class="txt"><b>${esc(c.name)}</b><span>${esc(c.set.name)} · ${esc(refOf(c))}</span><span>${added?`+1 ${esc(VAR_FR[resolveVariant(c,scan.variant)]||'')} · ${q} en tout`:(text?'Lu : '+esc(text):'')}</span></div>
+  $('#camResult').innerHTML=`<div class="cam-card"><div class="thumb" style="--tc:${tc(c)}">${thumbImg(c)}</div>
+    <div class="txt"><b>${esc(c.name)}</b><span>${esc(c.set.name)} · ${esc(refOf(c))}</span><span>${added?`+1 ${esc(VAR_FR[resolveVariant(c,scan.variant)]||'')} · ${q} en tout`:'À confirmer'}</span></div>
     <div class="acts">${added?'<button class="btn small" type="button" data-camundo>Annuler</button>':'<button class="btn small primary" type="button" data-camok>Ajouter</button><button class="btn small" type="button" data-camno>Pas ça</button>'}</div></div>`;
 }
 $('#cam').addEventListener('click', e=>{
   if (e.target.closest('[data-camclose]')) return closeCam();
   if (e.target.closest('[data-camok]') && cam.pending) return camAdd(cam.pending);
-  if (e.target.closest('[data-camno]')){ cam.pending=null; cam.votes.clear(); cam.armed=false; $('#camResult').innerHTML=''; camStatus('Ignorée. Bouge la carte pour relancer la lecture, ou tape le numéro'); return; }
+  if (e.target.closest('[data-camno]')){ cam.pending=null; $('#camResult').innerHTML=''; camStatus('Ignorée. Retire la carte pour relancer, ou tape le numéro'); return; }
   if (e.target.closest('[data-camundo]')){ scanUndo(); $('#camResult').innerHTML=''; camStatus('Ajout annulé'); return; }
   const vb=e.target.closest('#camVar button'); if (vb){ scan.variant=vb.dataset.v; saveScan(); fillCamVar(); fillScanControls(); }
 });
 $('#camClose').onclick=closeCam;
+$('#camDiagBtn').onclick=()=>{ cam.diag=!cam.diag; LS.set('classeur-fr-diag', cam.diag); cam.diagKey=''; fillCamVar(); };
 $('#camAuto').onchange=()=>{ cam.auto=$('#camAuto').checked; LS.set('classeur-fr-autoadd', cam.auto); };
 $('#camTorch').onclick=async()=>{ try{ cam.torch=!cam.torch; await cam.track.applyConstraints({advanced:[{torch:cam.torch}]}); $('#camTorch').setAttribute('aria-pressed',String(cam.torch)); }catch(e){} };
 $('#camPhoto').onchange=async ev=>{
   const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
-  $('#camMsg').hidden=true; camStatus('Lecture de la photo…','busy');
+  $('#camMsg').hidden=true; camStatus('Analyse de la photo…','busy');
   try{
-    const bmp=await createImageBitmap(f);
-    // the photo should show the whole card; trim a small margin and keep the card ratio
-    let w=bmp.width, h=bmp.height; if (w/h > 63/88){ w=h*63/88; } else { h=w*88/63; }
-    const R={x:(bmp.width-w)/2, y:(bmp.height-h)/2, w, h};
-    const found=await readSource(bmp, R);
-    const best=found.sort((a,b)=>b.score-a.score)[0];
-    if (!best){ camStatus('Numéro illisible sur cette photo : cadre la carte en entier, bien nette, ou tape le numéro','warn'); return; }
-    cam.pending=byId.get(best.card); showCamResult(cam.pending,false,best.text); camStatus('Carte reconnue, à confirmer');
+    const refs = cam.refs && cam.refs.length ? cam.refs : await loadRefs(scanSet(), (d,n)=>camStatus(`Préparation des images de la série… ${d}/${n}`,'busy'));
+    const bmp=await createImageBitmap(f), ws=640/Math.max(bmp.width,bmp.height), W=Math.round(bmp.width*ws), H=Math.round(bmp.height*ws);
+    wk.width=W; wk.height=H; wkx.drawImage(bmp,0,0,W,H);
+    let gh=H*0.86, gw=gh*63/88; if (gw>W*0.86){ gw=W*0.86; gh=gw*88/63; }
+    const r=Vision.identify(wkx.getImageData(0,0,W,H), {x:(W-gw)/2, y:(H-gh)/2, w:gw, h:gh}, refs);
+    if (cam.diag) showDiag(r, 0, r.s>=ACCEPT_S && r.margin>=ACCEPT_M);
+    if (r.s>=0.4 && r.margin>=0.06){ cam.pending=byId.get(r.id); showCamResult(cam.pending,false); camStatus('Carte reconnue, à confirmer','ok'); }
+    else camStatus('Carte pas reconnue : cadre-la en entier, bien à plat, sans reflet, et vérifie la série choisie','warn');
   }catch(e){ camStatus('Photo illisible','warn'); }
 };
 $('#scCam').onclick=openCam;
