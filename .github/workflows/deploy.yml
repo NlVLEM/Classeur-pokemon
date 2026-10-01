@@ -38,6 +38,18 @@ jobs:
           curl -fsSL --retry 3 -o cardmarket/products_singles_6.json https://downloads.s3.cardmarket.com/productCatalog/productList/products_singles_6.json
           curl -fsSL --retry 3 -o cardmarket/price_guide_6.json https://downloads.s3.cardmarket.com/productCatalog/priceGuide/price_guide_6.json
 
+      - name: Reprendre les scans pokemontcg.io déjà téléchargés
+        uses: actions/cache@v4
+        with:
+          path: pokemontcg
+          key: pokemontcg-${{ github.run_id }}
+          restore-keys: pokemontcg-
+
+      - name: Télécharger les scans manquants chez TCGdex (pokemontcg.io)
+        continue-on-error: true
+        timeout-minutes: 15
+        run: node scripts/pokemontcg.js download
+
       - name: Construire le catalogue et la page
         run: node scripts/build.js
 

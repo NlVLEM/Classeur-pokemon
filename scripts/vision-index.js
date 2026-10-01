@@ -38,7 +38,7 @@ async function pool(items, n, fn){ const q = [...items]; await Promise.all(Array
     const fr = frImage.get(c.id) || (c.s ? `${ASSETS}/fr/${c.s}/${c.set}/${encodeURIComponent(c.lid)}` : null);
     const alt = c.alt ? `${ASSETS}/${c.alt}` : null;   // older print with the same artwork, for cards without a scan
     const altEn = c.alt && c.alt.startsWith('fr/') ? `${ASSETS}/en/${c.alt.slice(3)}` : null;
-    return { id: c.id, urls: [...new Set([fr, en, alt, altEn].filter(Boolean))] };
+    return { id: c.id, urls: [...new Set([fr, en, c.ext, alt, altEn].filter(Boolean))] };   // c.ext: pokemontcg.io scan, size left open
   }).filter(j => j.urls.length);
 
   let cache = {};
@@ -46,19 +46,20 @@ async function pool(items, n, fn){ const q = [...items]; await Promise.all(Array
   const out = new Map(); let fromCache = 0, computed = 0, missing = 0, failed = 0, done = 0;
   await pool(jobs, CONCURRENCY, async j => {
     const hit = cache[j.id];
-    if (hit && j.urls.includes(hit.u)){ out.set(j.id, Buffer.from(hit.q, 'base64')); fromCache++; }
+    const before = hit ? j.urls.slice(0, j.urls.indexOf(hit.u)) : [];
+    if (hit && j.urls.includes(hit.u) && before.every(u => (hit.skip || []).includes(u) || (!hit.skip && !u.includes('{')))){ out.set(j.id, Buffer.from(hit.q, 'base64')); fromCache++; }
     else {
-      let ok = false;
+      let ok = false; const skip = [];
       for (const u of j.urls){
-        const buf = await get(u + '/low.webp');
+        const buf = await get(u.includes('{') ? u.replace('{sl}', 'small').replace('{hires}', '') : u + '/low.webp');
         if (buf === undefined){ failed++; break; }
-        if (buf === null) continue;
+        if (buf === null){ skip.push(u); continue; }
         try{
           const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
           const img = { width: info.width, height: info.height, data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.length) };
           const q = Vision.quantize(Vision.compact(Vision.fromRGBA(img)));
           const b = Buffer.from(q.buffer, q.byteOffset, q.length);
-          out.set(j.id, b); cache[j.id] = { u, q: b.toString('base64') }; computed++; ok = true; break;
+          out.set(j.id, b); cache[j.id] = { u, skip, q: b.toString('base64') }; computed++; ok = true; break;
         }catch(e){ /* unreadable image: try the next address */ }
       }
       if (!ok && !out.has(j.id)) missing++;

@@ -69,7 +69,7 @@ const cmMain = c => { if (c.thirdParty && c.thirdParty.cardmarket) return c.thir
 const cmRec = (c, set, lid, fr) => cmAll.push({ set: set.id, setOrder: cmSetOrder.get(set.id) ?? cmSetOrder.set(set.id, cmSetOrder.size).get(set.id), lid, en: c.name.en || '', moves: [...(c.attacks||[]), ...(c.abilities||[])].map(a => a.name && a.name.en), main: cmMain(c), fr });
 const nk = x => String(x||'').toLowerCase().normalize('NFD').replace(/[^a-z0-9|]+/g,'');
 const printKeys = (c, setObj, lang, p) => { const en=nk(c.name.en||c.name.fr), atk=(c.attacks||[]).map(a=>nk(a.name&&(a.name.en||a.name.fr))).join('|');
-  return { k1:[en,c.hp||'',nk(c.illustrator),atk].join('#'), k2: atk ? [en,c.hp||'',atk].join('#') : null, date: typeof setObj.releaseDate==='string'?setObj.releaseDate:'', setId:setObj.id, path:`${lang}/${p}` }; };
+  return { k1:[en,c.hp||'',nk(c.illustrator),atk].join('#'), k2: atk ? [en,c.hp||'',atk].join('#') : null, ill: nk(c.illustrator), date: typeof setObj.releaseDate==='string'?setObj.releaseDate:'', setId:setObj.id, path:`${lang}/${p}` }; };
 for (const serieName of fs.readdirSync(base).sort()) {
   const sDir = path.join(base, serieName);
   if (!fs.statSync(sDir).isDirectory() || serieName === 'Pokémon TCG Pocket') continue;
@@ -101,14 +101,19 @@ for (const serieName of fs.readdirSync(base).sort()) {
   }
 }
 
-// older print with the same artwork: name, HP, attacks (and illustrator when known)
+// older print with the same artwork: same name, HP, attacks and illustrator. Without an illustrator on either side,
+// name, HP and attacks only — and never when the illustrators differ, since that is another artwork.
 { const by1=new Map(), by2=new Map(), add=(m,k,r)=>{ if(!k) return; if(!m.has(k)) m.set(k,[]); m.get(k).push(r); };
   for (const r of pool){ add(by1,r.k1,r); add(by2,r.k2,r); }
   for (const m of [by1,by2]) for (const l of m.values()) l.sort((a,b)=>a.date.localeCompare(b.date));
   let n=0;
   reprint.forEach((r,i)=>{ const pick=l=>(l||[]).find(o=>o.setId!==r.setId && o.date && r.date && o.date<r.date);
-    const o=pick(by1.get(r.k1)) || pick(r.k2&&by2.get(r.k2)); cards[i][10]=o?o.path:0; if(o) n++; });
+    const o=(r.ill && pick(by1.get(r.k1))) || (!r.ill && pick((r.k2&&by2.get(r.k2)||[]).filter(x=>!x.ill))); cards[i][10]=o?o.path:0; if(o) n++; });
   console.log(`Éditions d'origine repérées : ${n}`); }
+// English scans from pokemontcg.io for the sets TCGdex has not scanned (see scripts/pokemontcg.js)
+{ const { images, report } = require('./pokemontcg').match(cards.map(c => ({ id: sets[c[0]].id + '-' + c[1], set: sets[c[0]].id, lid: c[1], en: c[3] || c[2], fr: c[2] })));
+  cards.forEach(c => { const t = images.get(sets[c[0]].id + '-' + c[1]); c[11] = t ? t.replace('https://images.pokemontcg.io/', 'P:').replace('https://images.scrydex.com/pokemon/', 'S:') : 0; });
+  console.log(report); }
 // Cardmarket products checked against Cardmarket's own catalogue (see scripts/cardmarket.js)
 const cmfix = {};
 { const { fixes, report } = require('./cardmarket').checkCardmarket(cmAll, process.env.CARDMARKET_DIR || path.join(REPO, 'cardmarket'));
@@ -127,7 +132,7 @@ if (!template.includes('/*VISION*/')) { console.error('Placeholder /*VISION*/ mi
 const visionCore = fs.readFileSync(path.join(REPO, 'src', 'vision-core.js'), 'utf8');
 fs.writeFileSync(path.join(SITE, 'index.html'), template.replace('/*CATALOG*/', () => catalog).replace('/*VISION*/', () => visionCore));
 // card list for scripts/vision-index.js
-fs.writeFileSync(path.join(REPO, 'vision-list.json'), JSON.stringify(cards.map(c => ({ id: sets[c[0]].id + '-' + c[1], s: sets[c[0]].s, set: sets[c[0]].id, lid: c[1], alt: c[10] || null }))));
+fs.writeFileSync(path.join(REPO, 'vision-list.json'), JSON.stringify(cards.map(c => ({ id: sets[c[0]].id + '-' + c[1], s: sets[c[0]].s, set: sets[c[0]].id, lid: c[1], alt: c[10] || null, ext: c[11] ? String(c[11]).replace(/^P:/, 'https://images.pokemontcg.io/').replace(/^S:/, 'https://images.scrydex.com/pokemon/') : null }))));
 const stamp = built + '-' + (process.env.GITHUB_SHA || Date.now().toString(36)).slice(0, 7);
 for (const f of fs.readdirSync(path.join(REPO, 'public'))) {
   const src = path.join(REPO, 'public', f);
