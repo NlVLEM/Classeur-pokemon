@@ -203,6 +203,10 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
 .scap .vc{display:flex;gap:3px;flex-wrap:wrap}
 .scap .vc span{font-size:10.5px;font-weight:700;padding:0 5px;border-radius:5px;background:var(--gold);color:var(--gold-ink)}
 .minus{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:16px;line-height:1;flex:none}
+.scanhero{display:grid;gap:10px;justify-items:start;margin:4px 0 18px}.scanhero .note{max-width:62ch;font-size:14px;color:var(--ink-2)}
+.camgo{font-size:17px;padding:14px 26px;border-radius:14px}
+.recent-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin:18px 0 8px}.recent-h h3{font-size:17px}
+.scvf{margin:-4px 0 12px}.scvf .num{opacity:.65;font-size:11.5px;margin-left:2px}
 .qrow{display:flex;gap:6px}.qrow input{min-width:0;flex:1}.qrow .btn{flex:none}
 .slot:not(.owned) .pocket{filter:grayscale(1);opacity:.5;transition:filter .15s ease,opacity .15s ease,transform .15s ease}
 .slot:not(.owned):hover .pocket,.slot:not(.owned):focus-visible .pocket{filter:none;opacity:1}
@@ -336,6 +340,7 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
         <button class="chip" aria-pressed="false" data-own="miss">Manquantes</button>
       </div>
     </div>
+    <div class="chips scvf" id="fVf" aria-label="Variante"></div>
     <div id="grid" class="grid"></div>
     <div class="more"><button class="btn" id="moreBtn" hidden>Afficher plus</button></div>
   </section>
@@ -356,28 +361,18 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
   </section>
 
   <section id="view-scan" hidden>
+    <div class="scanhero">
+      <button class="btn primary camgo" type="button" id="scCam">Ouvrir la caméra</button>
+      <p class="note">Pose tes cartes une par une devant la caméra : elle les reconnaît parmi toutes les cartes françaises, les ajoute et te dit où les ranger. Pour chercher une carte ou voir ce qui te manque, utilise le Catalogue ou les Classeurs.</p>
+    </div>
     <div class="scan-setup">
-      <div class="field sc-set"><label for="scSet">Série affichée</label><select id="scSet"></select><span class="note">La caméra reconnaît toutes les séries et affiche celle de la carte</span></div>
-      <div class="field"><label for="scBox" id="scBoxLbl">Rangement</label><input type="text" id="scBox" list="boxList" placeholder="Classeur bleu" autocomplete="off"></div>
-      <div class="field"><label for="scSpot">Emplacement</label><input type="text" id="scSpot" placeholder="Page 1" autocomplete="off"></div>
       <div class="field"><span class="lbl">Variante ajoutée</span><div class="seg" id="scVar"></div></div>
       <div class="field"><span class="lbl">État</span><div class="seg" id="scCond"></div></div>
-      <label class="check sc-master"><input type="checkbox" id="scMaster"> <span><b>Ranger en master set</b> : un classeur par série, chaque variante à sa case. La page et la case s’affichent à chaque ajout, les doubles vont dans le rangement ci-dessus.</span></label>
+      <label class="check sc-master"><input type="checkbox" id="scMaster"> <span><b>Ranger en master set</b> : chaque carte va à sa case du classeur de sa série, la caméra affiche la page et la case.</span></label>
+      <div class="field"><label for="scBox" id="scBoxLbl">Rangement</label><input type="text" id="scBox" list="boxList" placeholder="Classeur bleu" autocomplete="off"></div>
     </div>
-    <div class="quickbar">
-      <div class="field qnum"><label for="scNum">Numéro de la carte, puis Entrée</label><div class="qrow"><input type="text" id="scNum" placeholder="36 · 36r · TG05" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"><button class="btn primary" type="button" id="scCam">Caméra</button></div></div>
-      <div class="last" id="scLast"><span class="note">Tape un numéro ou touche une carte pour l’ajouter. Le bouton − retire un exemplaire.</span></div>
-      <div class="prog"><div class="prog-h"><b id="scHave" class="num">0/0</b><span id="scRev" class="note"></span></div><div class="bar"><i id="scBar" style="width:0"></i></div></div>
-    </div>
-    <div class="meta">
-      <span id="scCount" class="num"></span>
-      <div class="chips">
-        <button class="chip" aria-pressed="true" data-sown="">Toutes</button>
-        <button class="chip" aria-pressed="false" data-sown="miss">Manquantes</button>
-        <button class="chip" aria-pressed="false" data-sown="own">Possédées</button>
-      </div>
-    </div>
-    <div id="scGrid" class="grid sgrid"></div>
+    <div class="recent-h"><h3>Ajouts récents</h3><span class="note" id="scLast"></span></div>
+    <div id="scRecent"></div>
   </section>
 
   <section id="view-bind" hidden>
@@ -485,7 +480,7 @@ function cmpId(a,b){ const x=natKey(a),y=natKey(b); return x[0].localeCompare(y[
 function addCard(o){ if(!o.bonus) o.bonus=[]; o.hay = norm([o.name,o.en,o.set.name,o.set.en,o.set.code,o.set.oc].filter(Boolean).join(' ')) + ' ' + norm(o.lid+'/'+o.set.total) + ' #' + norm(o.lid); cards.push(o); byId.set(o.id,o); }
 for (const c of CAT.cards){
   const s = sets[c[0]];
-  addCard({id:s.id+'-'+c[1], set:s, lid:c[1], name:c[2], en:c[3]||'', rar:CAT.rarities[c[4]], type:c[5], cat:c[6], vars:c[7].split('|'), bonus:c[9]?String(c[9]).split('|'):[], img:null});
+  addCard({id:s.id+'-'+c[1], set:s, lid:c[1], name:c[2], en:c[3]||'', rar:CAT.rarities[c[4]], type:c[5], cat:c[6], vars:c[7].split('|'), bonus:c[9]?String(c[9]).split('|'):[], alt:c[10]||null, img:null});
 }
 const nSetsAtStart = sets.length;
 function fillFilters(){
@@ -516,6 +511,7 @@ async function syncLive(){
     for (const b of list){
       const c = byId.get(b.id);
       if (c){ c.img = b.image||null; c.noFr = !b.image; continue; }
+      if (b.image && b.image.includes('/tcgp/')) continue;   // Pokémon TCG Pocket (phone game): not physical cards
       const sid = b.id.slice(0, b.id.length - String(b.localId).length - 1);
       if (!unknown.has(sid)) unknown.set(sid, []);
       unknown.get(sid).push(b);
@@ -531,6 +527,7 @@ async function syncLive(){
     LS.set(K.sets, extra);
     let added=0;
     for (const [sid, bl] of unknown){
+      if (extra[sid] && extra[sid].s==='tcgp') continue;
       let s = setById.get(sid);
       if (!s){ const m = extra[sid] || {name:sid, date:'', serie:'Autres', s:'', total:0, code:''};
         s = Object.assign({id:sid, en:'', n:0, i:sets.length}, m); sets.push(s); setById.set(sid,s); }
@@ -554,19 +551,26 @@ function imgUrl(c, lang){ // FR scan (known from TCGdex, or built from the set p
   if (lang==='en' && c.set.s) return `${ASSETS}/en/${c.set.s}/${c.set.id}/${encodeURIComponent(c.lid)}`;
   return null;
 }
-function pocket(c, size){
-  const fr = imgUrl(c,'fr'), en = imgUrl(c,'en');
-  const src = fr || en;
-  const ph = `<div class="ph" style="--tc:${tc(c)}"><div class="n">${esc(c.name)}</div><div class="a">${esc(c.set.code?c.set.code+' '+c.lid:c.lid)}<small style="display:block;font-family:var(--body);font-size:10.5px;letter-spacing:0;text-transform:none;font-weight:500;opacity:.8;margin-top:4px">Scan pas encore publié</small></div></div>`;
-  if (!src) return ph;
-  return ph + `<img loading="lazy" alt="" src="${esc(src)}/${size}.webp" ${fr?`data-en="${esc(en||'')}"`:'data-last="1"'} data-size="${size}">${fr?'':'<span class="en">image EN</span>'}`;
+function imgChain(c){ const l=[]; const fr=imgUrl(c,'fr'), en=imgUrl(c,'en');
+  if (fr) l.push([fr,'']); if (en) l.push([en,'image EN']); if (c.alt) l.push([`${ASSETS}/${c.alt}`,'image d’origine']); return l; }
+function imgTag(c, size, withLabel){
+  const l=imgChain(c); if (!l.length) return '';
+  const rest=l.slice(1).map(([u,lab])=>u+'|'+lab).join(';');
+  return `<img loading="lazy" alt="" src="${esc(l[0][0])}/${size}.webp" data-size="${size}" data-next="${esc(rest)}">${withLabel&&l[0][1]?`<span class="en">${esc(l[0][1])}</span>`:''}`;
 }
-function thumbImg(c){ const fr=imgUrl(c,'fr'), en=imgUrl(c,'en'), src=fr||en; return src?`<img loading="lazy" alt="" src="${esc(src)}/low.webp" ${fr&&en?`data-en="${esc(en)}"`:''} data-size="low">`:''; }
-// image fallback: FR scan -> EN scan -> placeholder
+function pocket(c, size){
+  const ph = `<div class="ph" style="--tc:${tc(c)}"><div class="n">${esc(c.name)}</div><div class="a">${esc(c.set.code?c.set.code+' '+c.lid:c.lid)}<small style="display:block;font-family:var(--body);font-size:10.5px;letter-spacing:0;text-transform:none;font-weight:500;opacity:.8;margin-top:4px">Scan pas encore publié</small></div></div>`;
+  return ph + imgTag(c, size, true);
+}
+function thumbImg(c){ return imgTag(c, 'low', false); }
+// image fallback: FR scan -> EN scan -> older print with the same artwork -> placeholder
 document.addEventListener('error', e=>{
   const img = e.target; if (img.tagName!=='IMG' || !img.closest('.pocket,.thumb')) return;
-  if (img.dataset.en){ const en=img.dataset.en; img.removeAttribute('data-en'); img.dataset.last='1'; img.src=en+'/'+img.dataset.size+'.webp'; if(img.closest('.pocket')) img.insertAdjacentHTML('afterend','<span class="en">image EN</span>'); }
-  else { img.nextElementSibling?.classList.contains('en') && img.nextElementSibling.remove(); img.remove(); }
+  const lab=img.nextElementSibling && img.nextElementSibling.classList.contains('en') ? img.nextElementSibling : null;
+  const next=(img.dataset.next||'').split(';').filter(Boolean);
+  if (next.length){ const [u,l]=next.shift().split('|'); img.dataset.next=next.join(';'); img.src=u+'/'+img.dataset.size+'.webp';
+    if (img.closest('.pocket')){ if(lab) lab.textContent=l; else if(l) img.insertAdjacentHTML('afterend',`<span class="en">${esc(l)}</span>`); } }
+  else { if(lab) lab.remove(); img.remove(); }
 }, true);
 
 /* ---------- prices ---------- */
@@ -663,8 +667,10 @@ function filtered(){
   const out=cards.filter(c=>{
     if (si!=='' && c.set.i!=+si) return false;
     if (ft!==''){ if(ft==='t'||ft==='e'){ if(c.cat!==ft) return false; } else if(c.type!=+ft||c.cat!=='p') return false; }
-    if (state.own==='own' && !ownedById.has(c.id)) return false;
-    if (state.own==='miss' && ownedById.has(c.id)) return false;
+    if (state.vf && !c.vars.includes(state.vf)) return false;
+    const own = state.vf ? ((varsById.get(c.id)||{})[state.vf]||0)>0 : ownedById.has(c.id);
+    if (state.own==='own' && !own) return false;
+    if (state.own==='miss' && own) return false;
     for (const t of terms) if(!c.hay.includes(t)) return false;
     return true;
   });
@@ -674,7 +680,7 @@ function filtered(){
   return out;
 }
 function tile(c){
-  const q=ownedById.get(c.id)||0, mp=marketPrice(c.id, c.vars.includes('n')?'n':c.vars[0]);
+  const q=state.vf ? ((varsById.get(c.id)||{})[state.vf]||0) : (ownedById.get(c.id)||0), mp=marketPrice(c.id, state.vf||(c.vars.includes('n')?'n':c.vars[0]));
   return `<button class="slot${q?' owned':''}" data-id="${esc(c.id)}" aria-label="${esc(c.name)}, ${esc(c.set.name)} ${esc(c.lid)}${q?', possédée ×'+q:''}">
     ${q?`<span class="badge">×${q}</span>`:''}
     <div class="pocket">${pocket(c,'low')}</div>
@@ -682,9 +688,18 @@ function tile(c){
     <div class="cap2"><span class="nm">${esc(c.name)}</span>${mp!=null?`<span class="px">${eur(mp)}</span>`:''}</div>
   </button>`;
 }
+// variants offered by the filter: those of the selected series, or the common ones
+function renderVf(){
+  const si=$('#fSet').value, base = si!=='' ? cards.filter(c=>c.set.i==+si) : null;
+  const vars = base ? [...new Set(base.flatMap(c=>c.vars))].sort((a,b)=>vrank(a)-vrank(b)) : ['n','r','h','r.pokeball','r.masterball','1'];
+  if (state.vf && !vars.includes(state.vf)) state.vf='';
+  const missOf = v => base ? base.filter(c=>c.vars.includes(v) && !((varsById.get(c.id)||{})[v])).length : null;
+  $('#fVf').innerHTML = vars.length>1 ? `<button class="chip" type="button" data-vf="" aria-pressed="${!state.vf}">Toutes variantes</button>`+vars.map(v=>{ const m=missOf(v); return `<button class="chip" type="button" data-vf="${esc(v)}" aria-pressed="${state.vf===v}">${esc(vn(v))}${m!=null?` <span class="num" title="manquantes">${m}</span>`:''}</button>`; }).join('') : '';
+}
 function renderCatalog(){
+  renderVf();
   const list=filtered();
-  $('#resCount').textContent=`${list.length.toLocaleString('fr-FR')} carte${list.length>1?'s':''}`;
+  $('#resCount').textContent=`${list.length.toLocaleString('fr-FR')} carte${list.length>1?'s':''}${state.vf?' · '+vn(state.vf)+(state.own==='miss'?' manquantes':state.own==='own'?' possédées':''):''}`;
   const grid=$('#grid');
   if(!list.length){ grid.innerHTML=`<div class="empty" style="grid-column:1/-1"><h3>Aucune carte trouvée</h3><p>Essaie le nom anglais, ou un numéro comme « 4/102 ».</p></div>`; $('#moreBtn').hidden=true; return; }
   grid.innerHTML=list.slice(0,state.shown).map(tile).join('');
@@ -746,7 +761,7 @@ function renderSets(){
 function setSetFilter(f){ state.setFilter=f; $('#sStarted').setAttribute('aria-pressed',String(f==='started')); $('#sAllSets').setAttribute('aria-pressed',String(f==='all')); renderSets(); }
 
 function render(){ if(state.view==='cat') renderCatalog(); if(state.view==='col') renderCollection(); if(state.view==='set') renderSets(); if(state.view==='scan') renderScan(); if(state.view==='bind') renderBinder(); }
-function switchView(v){ state.view=v; document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.view===v))); ['cat','col','scan','bind','set'].forEach(x=>$('#view-'+x).hidden=x!==v); if(v==='bind' && !bview.set) bview.set=scanSet().id; render(); if(v==='scan' && matchMedia('(pointer:fine)').matches) $('#scNum').focus(); }
+function switchView(v){ state.view=v; document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.view===v))); ['cat','col','scan','bind','set'].forEach(x=>$('#view-'+x).hidden=x!==v); if(v==='bind' && !bview.set) bview.set=scanSet().id; render(); }
 
 /* ---------- scan mode ---------- */
 const scan = Object.assign({set:null, variant:'n', cond:'NM', box:'', spot:'', own:'', master:true}, LS.get('classeur-fr-scan',{}));
@@ -754,42 +769,28 @@ const undo = [];
 const newId = () => 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const lidKey = s => String(s).toLowerCase().replace(/\s+/g,'').replace(/^([a-z]*)0*(\d)/,'$1$2');
 const VAR_SHORT = {n:'N',r:'R',h:'H','1':'1ʳᵉ',p:'W',l:'L',m:'M'};
-function saveScan(){ scan.box=$('#scBox').value; scan.spot=$('#scSpot').value; scan.master=$('#scMaster').checked; LS.set('classeur-fr-scan',{set:scan.set,variant:scan.variant,cond:scan.cond,box:scan.box,spot:scan.spot,master:scan.master}); }
+function saveScan(){ scan.box=$('#scBox').value; scan.spot=''; scan.master=$('#scMaster').checked; LS.set('classeur-fr-scan',{set:scan.set,variant:scan.variant,cond:scan.cond,box:scan.box,spot:scan.spot,master:scan.master}); }
 function scanSet(){ return setById.get(scan.set) || [...sets].sort((a,b)=>b.date.localeCompare(a.date))[0]; }
 function scanCards(){ const s=scanSet(); return cards.filter(c=>c.set===s).sort((a,b)=>cmpId(a.lid,b.lid)); }
 function fillScanControls(){
   $('#scVar').innerHTML=[['n','Normale'],['r','Reverse'],['h','Holo'],['r.pokeball','Poké Ball'],['r.masterball','Master Ball'],['1','1ʳᵉ édition']].map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.variant===k}">${l}</button>`).join('');
   $('#scCond').innerHTML=COND.map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.cond===k}" title="${l}">${k}</button>`).join('');
 }
-function scanTile(c){
-  const vc=varsById.get(c.id)||{}, tot=ownedById.get(c.id)||0;
-  return `<div class="stile${tot?' owned':''}" data-id="${esc(c.id)}">
-    <button class="add" type="button" data-add aria-label="Ajouter ${esc(c.name)} n° ${esc(c.lid)}">${tot?`<span class="badge">×${tot}</span>`:''}<div class="pocket">${pocket(c,'low')}</div></button>
-    <div class="scap"><span class="no">${esc(c.lid)}</span><span class="vc">${Object.entries(vc).map(([v,q])=>`<span title="${vn(v)}">${vshort(v)}${q>1?'×'+q:''}</span>`).join('')}</span>${tot?'<button class="minus" type="button" data-minus aria-label="Retirer un exemplaire">−</button>':''}</div>
-  </div>`;
-}
+// recent adds of this device, newest first (the camera and the one-tap buttons write here)
+let recent = LS.get('classeur-fr-recent', []);
+function logRecent(c, v, where, dbl, box){ recent.unshift({id:c.id, v, t:Date.now(), w:where?`${where.box} · page ${where.pos.page} · case ${where.pos.slot}`:dbl?`Double → ${box}`:(box||'')}); recent=recent.slice(0,30); LS.set('classeur-fr-recent', recent); }
 function renderScan(){
-  const s=scanSet(); if(!s) return; scan.set=s.id; $('#scSet').value=String(s.i);
-  const list=scanCards();
-  const shown = scan.own==='miss' ? list.filter(c=>!ownedById.has(c.id)) : scan.own==='own' ? list.filter(c=>ownedById.has(c.id)) : list;
-  $('#scGrid').innerHTML = shown.length ? shown.map(scanTile).join('') : `<div class="empty" style="grid-column:1/-1"><h3>${scan.own==='miss'?'Série complète':'Aucune carte possédée dans cette série'}</h3><p>${scan.own==='miss'?'Tu as toutes les cartes de '+esc(s.name)+'.':'Tape un numéro ou touche une carte dans « Toutes » pour commencer.'}</p></div>`;
-  $('#scCount').textContent = `${esc(s.name)}${s.code?' · '+s.code:''} · ${shown.length} carte${shown.length>1?'s':''} affichée${shown.length>1?'s':''}`;
-  scanProgress(list);
+  const box=$('#scRecent'); if(!box) return;
+  const rows=recent.filter(r=>byId.has(r.id)).slice(0,20);
+  box.innerHTML = rows.length ? '<div class="list">'+rows.map((r,i)=>{ const c=byId.get(r.id);
+    return `<div class="item" data-id="${esc(c.id)}" tabindex="0" role="button"><div class="thumb" style="--tc:${tc(c)}">${thumbImg(c)}</div>
+      <div style="min-width:0;display:grid;gap:3px"><div class="t">${esc(c.name)} <span style="font-family:var(--mono);font-weight:500;font-size:13px;color:var(--ink-2)">${esc(refOf(c))}</span></div>
+      <div class="s"><span class="pill">${esc(vn(r.v))}</span>${r.w?`<span class="pill loc">${esc(r.w)}</span>`:''}<span>${new Date(r.t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</span></div></div>
+      <div class="v">${i===0&&undo.length?'<button class="btn small" type="button" data-rundo>Annuler</button>':''}</div></div>`; }).join('')+'</div>'
+    : '<div class="empty"><h3>Aucun ajout pour l’instant</h3><p>Ouvre la caméra et présente ta première carte.</p></div>';
 }
-function scanProgress(list){
-  list = list || scanCards();
-  const have=list.filter(c=>ownedById.has(c.id)).length;
-  const rv=list.filter(c=>c.vars.includes('r')), haveR=rv.filter(c=>(varsById.get(c.id)||{}).r).length;
-  $('#scHave').textContent=`${have}/${list.length}`;
-  if (scan.master && list.length){ const plan=planFor(list[0].set); let f=0; for(const s of plan.slots) if(!s.empty && (varsById.get(s.c.id)||{})[s.v]) f++; $('#scRev').textContent=`Master set ${f}/${plan.real}`; }
-  else $('#scRev').textContent = rv.length ? `Reverse ${haveR}/${rv.length}` : '';
-  $('#scBar').style.width=(list.length?have/list.length*100:0)+'%';
-}
-function patchTile(id){
-  const sel=`.stile[data-id="${CSS.escape(id)}"]`, el=$('#scGrid').querySelector(sel), c=byId.get(id);
-  if (el && c){ el.outerHTML=scanTile(c); $('#scGrid').querySelector(sel)?.classList.add('flash'); }
-  scanProgress();
-}
+function scanProgress(){}
+function patchTile(){ renderScan(); }
 function resolveVariant(c, v){ if(c.vars.includes(v)) return v; if(v==='n'&&c.vars.includes('h')) return 'h'; if(v==='h'&&c.vars.includes('n')) return 'n'; return v; }
 function scanAdd(c, v){
   saveScan();
@@ -803,6 +804,7 @@ function scanAdd(c, v){
   else { id=newId(); entries.set(id,{card:c.id, variant:v, cond, qty:1, price:null, box, spot, added:Date.now()}); }
   if (box && !where) LS.set('classeur-fr-lastbox', box);
   undo.push({id, before, card:c.id}); if (undo.length>200) undo.shift();
+  logRecent(c, v, where, dbl, box);
   afterScanChange(c, `+1 ${vn(v)} · ${cond}${where?` → page ${where.pos.page}, case ${where.pos.slot}`:dbl?` → ${box} (case déjà remplie)`:''}`, !c.vars.includes(v));
   return {where, dbl, box, v};
 }
@@ -817,6 +819,7 @@ function scanRemove(c){
 }
 function scanUndo(){
   const u=undo.pop(); if(!u) return;
+  if (!u.batch && !u.before && recent.length && recent[0].id===u.card){ recent.shift(); LS.set('classeur-fr-recent', recent); }
   if (u.batch){ for (const x of [...u.batch].reverse()){ if(x.before) entries.set(x.id,x.before); else entries.delete(x.id); } saveEntries(); recompute(); return; }
   if (u.before) entries.set(u.id, u.before); else entries.delete(u.id);
   afterScanChange(byId.get(u.card), 'Action annulée', false, true);
@@ -825,10 +828,7 @@ function afterScanChange(c, what, warnVar, isUndo){
   saveEntries(); recompute(true);
   if (!c) return;
   patchTile(c.id); queuePrice(c.id);
-  const q=ownedById.get(c.id)||0, last=$('#scLast');
-  last.className='last';
-  last.innerHTML=`<div class="thumb" style="--tc:${tc(c)}">${thumbImg(c)}</div><div class="txt"><b>${esc(c.name)} · ${esc(refOf(c))}</b><span>${esc(what)}${warnVar?' (variante non répertoriée pour cette carte)':''} · ${q} en tout</span></div>${undo.length?'<button class="btn small" type="button" id="scUndo">Annuler</button>':''}`;
-  const ub=$('#scUndo'); if (ub) ub.onclick=scanUndo;
+  const last=$('#scLast'); if (last) last.textContent = `${c.name} ${refOf(c)} : ${what}${warnVar?' (variante non répertoriée pour cette carte)':''}`;
 }
 const pq=new Set(); let pqT;
 function queuePrice(id){
@@ -836,29 +836,13 @@ function queuePrice(id){
   pq.add(id); clearTimeout(pqT);
   pqT=setTimeout(async()=>{ const ids=[...pq]; pq.clear(); await pool(ids,4,async i=>{ try{ await fetchPrice(i); }catch(e){} }); recompute(state.view==='scan'); showPriceStatus(); }, 900);
 }
-$('#scNum').addEventListener('keydown', e=>{
-  if (e.key!=='Enter') return; e.preventDefault();
-  const raw=$('#scNum').value.trim().toLowerCase(); if(!raw) return;
-  let num=raw.split('/')[0].trim(), v=null;
-  const m=num.match(/^(.*\d)\s*([rhn])$/); if (m){ num=m[1]; v=m[2]; }
-  const k=lidKey(num), c=scanCards().find(x=>lidKey(x.lid)===k);
-  const last=$('#scLast');
-  if (!c){ last.className='last err'; last.textContent=`Pas de carte n° ${raw} dans ${scanSet().name}. Vérifie la série choisie.`; $('#scNum').select(); return; }
-  scanAdd(c, v); $('#scNum').value='';
-  const el=$('#scGrid').querySelector(`.stile[data-id="${CSS.escape(c.id)}"]`); if (el) el.scrollIntoView({block:'nearest', behavior:'smooth'});
-});
-$('#scGrid').addEventListener('click', e=>{
-  const t=e.target.closest('.stile'); if(!t) return; const c=byId.get(t.dataset.id); if(!c) return;
-  if (e.target.closest('[data-minus]')) scanRemove(c); else if (e.target.closest('[data-add]')) scanAdd(c);
-});
 $('#scVar').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; scan.variant=b.dataset.v; saveScan(); fillScanControls(); });
 $('#scCond').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; scan.cond=b.dataset.v; saveScan(); fillScanControls(); });
-$('#scSet').onchange=()=>{ scan.set=sets[+$('#scSet').value].id; saveScan(); undo.length=0; $('#scLast').innerHTML='<span class="note">Tape un numéro ou touche une carte pour l’ajouter.</span>'; renderScan(); };
-$('#scBox').addEventListener('input', saveScan); $('#scSpot').addEventListener('input', saveScan);
-document.querySelectorAll('[data-sown]').forEach(b=>b.onclick=()=>{ scan.own=b.dataset.sown; document.querySelectorAll('[data-sown]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); renderScan(); });
-$('#scBox').value=scan.box||''; $('#scSpot').value=scan.spot||''; $('#scMaster').checked=scan.master!==false; fillScanControls(); updateMasterUI();
+$('#scBox').addEventListener('input', saveScan);
+$('#scBox').value=scan.box||''; $('#scMaster').checked=scan.master!==false; fillScanControls(); updateMasterUI();
 function updateMasterUI(){ const m=$('#scMaster').checked; $('#scBoxLbl').textContent=m?'Doubles vers':'Rangement'; $('#scBox').placeholder=m?'Doubles':'Classeur bleu'; }
 $('#scMaster').onchange=()=>{ saveScan(); updateMasterUI(); renderScan(); };
+$('#scRecent').addEventListener('click', e=>{ if (e.target.closest('[data-rundo]')){ scanUndo(); renderScan(); return; } const it=e.target.closest('.item'); if(it) openSheet(it.dataset.id); });
 
 
 /*VISION*/
@@ -1417,12 +1401,18 @@ function openSheet(id, entryId, preVar){
   if(entryId && entries.has(entryId)){ editing=entryId; const e=entries.get(entryId); form={variant:e.variant,cond:e.cond,qty:+e.qty||1,price:e.price??'',box:e.box||'',spot:e.spot||'',graded:!!e.grade,co:e.grade?e.grade.co:'CCC',note:e.grade?String(e.grade.note):'10',label:e.grade&&e.grade.label||'',cert:e.grade&&e.grade.cert||''}; }
   else { editing=null; const lastBox=LS.get('classeur-fr-lastbox',''); const v0=preVar&&c.vars.includes(preVar)?preVar:(c.vars.includes('n')?'n':c.vars[0]);
     form={variant:v0,cond:'NM',qty:1,price:'',box:lastBox,spot:'',graded:false,co:LS.get('classeur-fr-lastgrader','CCC'),note:'10',label:'',cert:''};
-    if (scan.master){ const w=whereFor(c,v0); if(w && !placedIn(w,c,v0)){ form.box=w.box; form.spot=w.spot; } } }
+    placeForm(c); }
   $('#scrim').hidden=false; $('#sheet').hidden=false;
   priceState = prices[id] && Date.now()-prices[id].t<DAY ? '' : 'loading';
   renderSheet(); $('#shClose').focus();
   if (online) fetchPrice(id).then(()=>{ priceState=''; if(openId===id){ keepForm(); renderSheet(); } recompute(); }).catch(()=>{ priceState='error'; if(openId===id){ keepForm(); renderSheet(); } });
   else priceState='offline';
+}
+function placeForm(c){
+  const lastBox=LS.get('classeur-fr-lastbox',''), loose = /^Classeur /.test(lastBox) ? '' : lastBox;
+  const w = scan.master && whereFor(c, form.variant);
+  if (w && !placedIn(w, c, form.variant)){ form.box=w.box; form.spot=w.spot; }
+  else { form.box = scan.master ? (scan.box||'Doubles') : (/^Classeur /.test(form.box)? loose : (form.box||loose)); form.spot = /^Page /.test(form.spot)?'':form.spot; }
 }
 function masterPlaces(c){
   const plan=planFor(c.set), vs=masterVars(c, plan.cfg); if(!vs.length) return '';
@@ -1504,7 +1494,7 @@ $('#shBody').addEventListener('change', e=>{
   renderSheet();
 });
 $('#shBody').addEventListener('click', e=>{
-  const sb=e.target.closest('.seg button'); if(sb){ keepForm(); form[sb.parentElement.dataset.f]=sb.dataset.v; renderSheet(); return; }
+  const sb=e.target.closest('.seg button'); if(sb){ keepForm(); form[sb.parentElement.dataset.f]=sb.dataset.v; if(sb.parentElement.dataset.f==='variant' && !editing && !form.graded) placeForm(byId.get(openId)); renderSheet(); return; }
   const st=e.target.closest('[data-step]'); if(st){ form.qty=Math.max(1,Math.min(999,form.qty+ +st.dataset.step)); $('#qtyOut').textContent=form.qty; return; }
   const a=e.target.closest('[data-act]'); if(!a) return; const id=a.dataset.id;
   if(a.dataset.act==='edit'){ openSheet(openId,id); }
@@ -1529,7 +1519,7 @@ $('#shBody').addEventListener('submit', e=>{
     else id='e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
   } else data.added=entries.get(id)?.added;
   data.added=data.added||Date.now();
-  entries.set(id,data); saveEntries(); if(data.box) LS.set('classeur-fr-lastbox',data.box);
+  entries.set(id,data); saveEntries(); if(data.box && !/^Classeur /.test(data.box) && !data.grade) LS.set('classeur-fr-lastbox',data.box);
   toast(editing?'Modifications enregistrées':`Ajoutée : ${c.name}${data.grade?' '+gradeLabel(data.grade):''} ×${form.qty}${data.box?' · '+data.box:''}`);
   editing=null; form.qty=1; form.price=''; form.spot='';
   recompute();
@@ -1579,7 +1569,8 @@ let deb; $('#q').addEventListener('input',()=>{ clearTimeout(deb); deb=setTimeou
 ['#fSet','#fType','#fSort'].forEach(s=>$(s).onchange=()=>{ state.shown=60; renderCatalog(); });
 document.querySelectorAll('[data-own]').forEach(b=>b.onclick=()=>{ state.own=b.dataset.own; state.shown=60; document.querySelectorAll('[data-own]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); renderCatalog(); });
 $('#moreBtn').onclick=()=>{ state.shown+=120; renderCatalog(); };
-$('#grid').addEventListener('click',e=>{ const s=e.target.closest('.slot'); if(s) openSheet(s.dataset.id); });
+$('#grid').addEventListener('click',e=>{ const s=e.target.closest('.slot'); if(s) openSheet(s.dataset.id, null, state.vf||undefined); });
+$('#fVf').addEventListener('click',e=>{ const b=e.target.closest('[data-vf]'); if(!b) return; state.vf=b.dataset.vf; state.shown=60; renderCatalog(); });
 $('#colList').addEventListener('click',e=>{ const s=e.target.closest('.item'); if(s) openSheet(s.dataset.id, s.dataset.entry); });
 $('#colList').addEventListener('keydown',e=>{ if(e.key==='Enter'){ const s=e.target.closest('.item'); if(s) openSheet(s.dataset.id, s.dataset.entry); } });
 $('#cq').addEventListener('input',renderCollection);

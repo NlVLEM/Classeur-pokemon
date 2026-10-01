@@ -61,6 +61,10 @@ function bonusOf(c, serieId) {
   return /Holo/i.test(r) ? 'n' : 'h';
 }
 const base = path.join(ROOT, 'data'); let skipped = 0;
+const reprint = [], pool = [];   // reprint: one entry per catalogue card; pool: every print, including sets without a French release
+const nk = x => String(x||'').toLowerCase().normalize('NFD').replace(/[^a-z0-9|]+/g,'');
+const printKeys = (c, setObj, lang, p) => { const en=nk(c.name.en||c.name.fr), atk=(c.attacks||[]).map(a=>nk(a.name&&(a.name.en||a.name.fr))).join('|');
+  return { k1:[en,c.hp||'',nk(c.illustrator),atk].join('#'), k2: atk ? [en,c.hp||'',atk].join('#') : null, date: typeof setObj.releaseDate==='string'?setObj.releaseDate:'', setId:setObj.id, path:`${lang}/${p}` }; };
 for (const serieName of fs.readdirSync(base).sort()) {
   const sDir = path.join(base, serieName);
   if (!fs.statSync(sDir).isDirectory() || serieName === 'Pokémon TCG Pocket') continue;
@@ -69,6 +73,9 @@ for (const serieName of fs.readdirSync(base).sort()) {
     const setDir = path.join(sDir, setName);
     if (!fs.statSync(setDir).isDirectory()) continue;
     const set = load(path.join(sDir, setName + '.ts'));
+    if (set && set.name && !set.name.fr){ // not released in French: still useful as an older print of a reprinted artwork
+      for (const f of fs.readdirSync(setDir).sort()){ if(!f.endsWith('.ts')) continue; const c=load(path.join(setDir,f)); if(c&&c.name&&(c.name.en)) pool.push(printKeys(c,set,'en',`${serie.id}/${set.id}/${f.replace(/\.ts$/,'')}`)); }
+    }
     if (!set || !set.name || !set.name.fr) { skipped++; continue; }
     const si = sets.length; let count = 0;
     for (const f of fs.readdirSync(setDir).sort()) {
@@ -78,6 +85,7 @@ for (const serieName of fs.readdirSync(base).sort()) {
       const t = (c.types && c.types[0]) ? TYPES.indexOf(c.types[0]) : -1;
       const cat = c.category === 'Trainer' ? 't' : c.category === 'Energy' ? 'e' : 'p';
       cards.push([si, f.replace(/\.ts$/, ''), c.name.fr, (c.name.en && c.name.en !== c.name.fr) ? c.name.en : 0, R(c.rarity), t, cat, variantsOf(c), (c.dexId && c.dexId[0]) || 0, bonusOf(c, serie.id) || 0]);
+      { const r=printKeys(c,set,'fr',`${serie.id}/${set.id}/${f.replace(/\.ts$/,'')}`); reprint.push(r); pool.push(r); }
       count++;
     }
     if (!count) continue;
@@ -87,6 +95,14 @@ for (const serieName of fs.readdirSync(base).sort()) {
   }
 }
 
+// older print with the same artwork: name, HP, attacks (and illustrator when known)
+{ const by1=new Map(), by2=new Map(), add=(m,k,r)=>{ if(!k) return; if(!m.has(k)) m.set(k,[]); m.get(k).push(r); };
+  for (const r of pool){ add(by1,r.k1,r); add(by2,r.k2,r); }
+  for (const m of [by1,by2]) for (const l of m.values()) l.sort((a,b)=>a.date.localeCompare(b.date));
+  let n=0;
+  reprint.forEach((r,i)=>{ const pick=l=>(l||[]).find(o=>o.setId!==r.setId && o.date && r.date && o.date<r.date);
+    const o=pick(by1.get(r.k1)) || pick(r.k2&&by2.get(r.k2)); cards[i][10]=o?o.path:0; if(o) n++; });
+  console.log(`Éditions d'origine repérées : ${n}`); }
 if (cards.length < 15000) { console.error('Only ' + cards.length + ' cards found: the TCGdex layout may have changed, deployment stopped.'); process.exit(1); }
 const built = new Date().toISOString().slice(0, 10);
 const catalog = JSON.stringify({ v: 2, built, rarities, types: TYPES, sets, cards }).replace(/<\//g, '<\\/');
@@ -100,7 +116,7 @@ if (!template.includes('/*VISION*/')) { console.error('Placeholder /*VISION*/ mi
 const visionCore = fs.readFileSync(path.join(REPO, 'src', 'vision-core.js'), 'utf8');
 fs.writeFileSync(path.join(SITE, 'index.html'), template.replace('/*CATALOG*/', () => catalog).replace('/*VISION*/', () => visionCore));
 // card list for scripts/vision-index.js
-fs.writeFileSync(path.join(REPO, 'vision-list.json'), JSON.stringify(cards.map(c => ({ id: sets[c[0]].id + '-' + c[1], s: sets[c[0]].s, set: sets[c[0]].id, lid: c[1] }))));
+fs.writeFileSync(path.join(REPO, 'vision-list.json'), JSON.stringify(cards.map(c => ({ id: sets[c[0]].id + '-' + c[1], s: sets[c[0]].s, set: sets[c[0]].id, lid: c[1], alt: c[10] || null }))));
 const stamp = built + '-' + (process.env.GITHUB_SHA || Date.now().toString(36)).slice(0, 7);
 for (const f of fs.readdirSync(path.join(REPO, 'public'))) {
   const src = path.join(REPO, 'public', f);

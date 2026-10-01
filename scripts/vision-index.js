@@ -32,11 +32,12 @@ async function pool(items, n, fn){ const q = [...items]; await Promise.all(Array
   try{ const buf = await get(API + '/cards'); if (buf) for (const c of JSON.parse(buf.toString('utf8'))) if (c.image) frImage.set(c.id, c.image); }catch(e){}
   console.log(`TCGdex: ${frImage.size} scans français connus`);
   const known = new Set(list.map(c => c.id));
-  for (const [id] of frImage) if (!known.has(id)) list.push({ id, live: true });   // cards newer than the card database
+  for (const [id, img] of frImage) if (!known.has(id) && !img.includes('/tcgp/')) list.push({ id, live: true });   // cards newer than the card database (TCG Pocket left out)
   const jobs = list.map(c => {
     const en = c.s ? `${ASSETS}/en/${c.s}/${c.set}/${encodeURIComponent(c.lid)}` : null;
     const fr = frImage.get(c.id) || (c.s ? `${ASSETS}/fr/${c.s}/${c.set}/${encodeURIComponent(c.lid)}` : null);
-    return { id: c.id, urls: [...new Set([fr, en].filter(Boolean))] };
+    const alt = c.alt ? `${ASSETS}/${c.alt}` : null;   // older print with the same artwork, for cards without a scan
+    return { id: c.id, urls: [...new Set([fr, en, alt].filter(Boolean))] };
   }).filter(j => j.urls.length);
 
   let cache = {};
