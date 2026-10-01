@@ -300,9 +300,11 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
 .bslot .pocket{position:absolute;inset:0}
 .bslot:not(.own) .pocket{filter:grayscale(1);opacity:.35}
 .bslot.own .pocket{box-shadow:0 0 0 2px var(--gold),var(--shadow)}
-.pill.grade{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+.pill.grade,.bgrade{background:#F6F7FA;border:1px solid rgba(23,26,43,.18);color:#171A2B}
+.pill.grade.gold,.bgrade.gold{background:linear-gradient(135deg,#FBE7A1,#D8A93C 52%,#F5D57E);border-color:#C79A2E;color:#3A2C00}
+.pill.grade.black,.bgrade.black{background:#000;border-color:#000;color:#E8C66A}
 .gswitch{font-size:14px}
-.bgrade{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;font:700 11px/1 var(--body);padding:4px 6px;border-radius:6px;background:var(--gold);color:var(--gold-ink);white-space:nowrap}
+.bgrade{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;font:700 11px/1 var(--body);padding:4px 6px;border-radius:6px;white-space:nowrap}
 .bpage-h{align-items:center;gap:8px;flex-wrap:wrap}.pacts{display:flex;gap:6px}
 .bbonus{position:absolute;right:4px;top:4px;z-index:2;font:700 9.5px/1 var(--body);padding:3px 5px;border-radius:5px;background:var(--gold);color:var(--gold-ink);text-transform:uppercase;letter-spacing:.04em}
 .bonus-page .bpage-h span:first-child{color:var(--gold)}
@@ -480,6 +482,7 @@ const GRADERS = [['CCC','CCC'],['PCA','PCA'],['PSA','PSA'],['CGC','CGC'],['BGS',
 const LABELS = [['','Standard'],['Gold','Gold Label'],['Black','Black Label']];   // special labels given to some 10s (CCC Gold/Black, BGS Black Label…)
 const GRADES = ['10','9.5','9','8.5','8','7.5','7','6.5','6','5.5','5','4.5','4','3.5','3','2.5','2','1.5','1'];
 function gradeLabel(g){ return g ? `${g.co==='Autre'?'Gradée':g.co} ${String(g.note).replace('.',',')}${g.label?' '+g.label:''}` : ''; }
+const gradeCls = g => g ? ' grade'+(g.label==='Gold'?' gold':g.label==='Black'?' black':'') : '';
 function condLabel(e){ return e.grade ? gradeLabel(e.grade) : e.cond; }
 function certUrl(g){ if(!g||!g.cert) return ''; const n=encodeURIComponent(g.cert.replace(/\s+/g,''));
   return g.co==='PSA' ? `https://www.psacard.com/cert/${n}/psa` : g.co==='PCA' ? 'https://pcagrade.com/fr/verif' : g.co==='CCC' ? 'https://cccgrading.com/en/ccc-card-verification' : 'https://cardgrade.io/tools/cert-lookup'; }
@@ -787,7 +790,7 @@ function renderCollection(){
       <div class="thumb">${thumbImg(c)}</div>
       <div style="min-width:0;display:grid;gap:3px">
         <div class="t">${esc(c.name)} <span style="font-family:var(--mono);font-weight:500;font-size:13px;color:var(--ink-2)">${esc(refOf(c))}</span></div>
-        <div class="s"><span>${esc(c.set.name)}</span><span class="pill">${esc(vn(e.variant))}</span><span class="pill${e.grade?' grade':''}">${esc(condLabel(e))}</span>${loc?`<span class="pill loc">${esc(loc)}</span>`:''}</div>
+        <div class="s"><span>${esc(c.set.name)}</span><span class="pill">${esc(vn(e.variant))}</span><span class="pill${gradeCls(e.grade)}">${esc(condLabel(e))}</span>${loc?`<span class="pill loc">${esc(loc)}</span>`:''}</div>
       </div>
       <div class="v"><b>×${+e.qty||0}</b><span>${priceTxt(e,u)}${u.v!=null?(u.src==='manuel'?' · manuel':u.src==='carte brute'?' · prix brut':''):''}</span></div>
     </div>`;
@@ -1212,7 +1215,7 @@ function binderPage(plan, b, p){
     if (!s || s.empty){ cells.push(`<div class="bslot empty${s&&s.lead?' lead':''}"><span class="bk">${k+1}</span></div>`); continue; }
     const own=(varsById.get(s.c.id)||{})[s.v]||0;
     cells.push(`<button type="button" class="bslot${own?' own':''}${s.bonus?' bonus':''}" data-id="${esc(s.c.id)}" data-v="${esc(s.v)}" title="${esc(s.c.name)} · ${esc(s.c.lid)} · ${esc(vn(s.v))}${own?'':' (manquante)'}">
-      <div class="pocket">${pocket(s.c,'low')}</div><span class="btag${s.v==='n'||s.v==='h'?' plain':''}">${esc(vshort(s.v))}</span>${s.bonus?'<span class="bbonus">Bonus</span>':''}${own&&!placedIn(whereFor(s.c,s.v),s.c,s.v)&&gradedOf(s.c,s.v)?`<span class="bgrade">${esc(gradeLabel(gradedOf(s.c,s.v)))}</span>`:''}<span class="bnum">${esc(s.c.lid)}</span><span class="bk">${k+1}</span></button>`);
+      <div class="pocket">${pocket(s.c,'low')}</div><span class="btag${s.v==='n'||s.v==='h'?' plain':''}">${esc(vshort(s.v))}</span>${s.bonus?'<span class="bbonus">Bonus</span>':''}${own&&!placedIn(whereFor(s.c,s.v),s.c,s.v)&&gradedOf(s.c,s.v)?`<span class="bgrade${gradeCls(gradedOf(s.c,s.v)).replace(' grade','')}">${esc(gradeLabel(gradedOf(s.c,s.v)))}</span>`:''}<span class="bnum">${esc(s.c.lid)}</span><span class="bk">${k+1}</span></button>`);
   }
   const hasBonus=plan.slots.slice(start,start+plan.pocket).some(s=>s&&s.bonus);
   let toFill=0, filledHere=0;
@@ -1538,7 +1541,7 @@ function renderSheet(){
     </div>
     ${priceBlock(c)}
     ${mine.length?`<div class="entries"><h3 style="font-size:16px">Dans ton classeur</h3>${mine.map(([id,e])=>{ const u=unitValue(e), loc=locLabel(e); return `
-      <div class="entry"><div class="l"><b class="num">×${+e.qty||0}</b><span class="pill">${esc(vn(e.variant))}</span><span class="pill${e.grade?' grade':''}">${esc(condLabel(e))}</span>${e.grade&&e.grade.cert?`<span class="num" style="font-size:12px;color:var(--ink-2)">n° ${esc(e.grade.cert)}</span>`:''}${loc?`<span class="pill loc">${esc(loc)}</span>`:''}<span class="num" style="font-size:13px;color:var(--ink-2)">${u.v!=null?eur(u.v)+' / u'+(u.src==='manuel'?' (manuel)':u.src==='carte brute'?' (prix brut)':''):''}</span>${e.grade?(e.grade.cert?`<a class="link" style="font-size:13px" href="${esc(certUrl(e.grade))}" target="_blank" rel="noopener">Vérifier le certificat ↗</a>`:''):`<a class="link" style="font-size:13px" href="${esc(cmUrl(c,e.variant,e.cond,true))}" target="_blank" rel="noopener" title="Annonces en français pour cet exemplaire">Annonces ↗</a>`}</div>
+      <div class="entry"><div class="l"><b class="num">×${+e.qty||0}</b><span class="pill">${esc(vn(e.variant))}</span><span class="pill${gradeCls(e.grade)}">${esc(condLabel(e))}</span>${e.grade&&e.grade.cert?`<span class="num" style="font-size:12px;color:var(--ink-2)">n° ${esc(e.grade.cert)}</span>`:''}${loc?`<span class="pill loc">${esc(loc)}</span>`:''}<span class="num" style="font-size:13px;color:var(--ink-2)">${u.v!=null?eur(u.v)+' / u'+(u.src==='manuel'?' (manuel)':u.src==='carte brute'?' (prix brut)':''):''}</span>${e.grade?(e.grade.cert?`<a class="link" style="font-size:13px" href="${esc(certUrl(e.grade))}" target="_blank" rel="noopener">Vérifier le certificat ↗</a>`:''):`<a class="link" style="font-size:13px" href="${esc(cmUrl(c,e.variant,e.cond,true))}" target="_blank" rel="noopener" title="Annonces en français pour cet exemplaire">Annonces ↗</a>`}</div>
       <div class="acts">${confirmDel===id?`<button class="btn small danger" data-act="del" data-id="${id}">Retirer</button><button class="btn small" data-act="nodel">Garder</button>`:`<button class="btn small" data-act="edit" data-id="${id}">Modifier</button><button class="btn small danger" data-act="askdel" data-id="${id}" aria-label="Retirer">✕</button>`}</div></div>`; }).join('')}</div>`:''}
     <form class="form" id="addForm">
       <h3>${editing?'Modifier cet exemplaire':'Ajouter à mon classeur'}</h3>
