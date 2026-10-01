@@ -27,12 +27,25 @@ const sets = [], cards = [], rarities = [], rarIdx = {};
 const R = r => { r = r || 'None'; if (!(r in rarIdx)) { rarIdx[r] = rarities.length; rarities.push(r); } return rarIdx[r]; };
 const TYPES = ['Grass','Fire','Water','Lightning','Psychic','Fighting','Darkness','Metal','Fairy','Dragon','Colorless'];
 const VAR = { normal: 'n', reverse: 'r', holo: 'h', firstEdition: '1', wPromo: 'p', lenticular: 'l', metal: 'm' };
+// variants that come out of booster packs, in master-set order later: normal, holo, reverse, patterned reverses
+// (Poké Ball, Master Ball, Énergie, Team Rocket…). Stamped promos, jumbo cards and blister-only foils are left out.
+const BOOSTER_FOIL = /ball|energy|rocket/;
 function variantsOf(c) {
-  const out = new Set(); const v = c.variants;
-  if (Array.isArray(v)) { for (const x of v) { if (x.subtype === '1st-edition' || x.subtype === 'first-edition') out.add('1'); if (VAR[x.type]) out.add(VAR[x.type]); } }
-  else if (v && typeof v === 'object') { for (const k in v) if (v[k] && VAR[k]) out.add(VAR[k]); }
-  if (!out.size) out.add(/Holo/.test(c.rarity || '') ? 'h' : 'n');
-  return [...out].join('');
+  const out = []; const add = k => { if (!out.includes(k)) out.push(k); }; const v = c.variants;
+  if (Array.isArray(v)) {
+    for (const x of v) {
+      if (x.size && x.size !== 'standard') continue;
+      const stamps = [].concat(x.stamp || []);
+      if (stamps.includes('1st-edition') || x.subtype === '1st-edition' || x.subtype === 'first-edition') { add('1'); continue; }
+      if (stamps.length) continue;
+      const base = VAR[x.type]; if (!base) continue;
+      if (x.subtype === 'shadowless') { add(base + '.shadowless'); continue; }
+      if (x.foil) { if (BOOSTER_FOIL.test(x.foil) && (base === 'r' || base === 'h')) add(base + '.' + x.foil); continue; }
+      add(base);
+    }
+  } else if (v && typeof v === 'object') { for (const k in v) if (v[k] && VAR[k]) add(VAR[k]); }
+  if (!out.length) out.push(/Holo/.test(c.rarity || '') ? 'h' : 'n');
+  return out.join('|');
 }
 const base = path.join(ROOT, 'data'); let skipped = 0;
 for (const serieName of fs.readdirSync(base).sort()) {

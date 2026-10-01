@@ -243,6 +243,34 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
 .cam-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 32px));background:#15182b;border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:18px;text-align:center;display:grid;gap:10px}
 .cam-msg p{margin:0;color:#c8cce0;font-size:14px}
 .cam-msg .btn{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3)}.cam-msg .btn.primary{background:#FFD646;color:#1a1400;border-color:#FFD646}
+/* binders */
+.sc-master{grid-column:1/-1;align-items:flex-start;font-size:13.5px;line-height:1.4}.sc-master input{margin-top:3px}
+.btools{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto}
+@media (max-width:760px){.btools{grid-template-columns:1fr 1fr}}
+.bsum{display:grid;gap:6px;margin:4px 0 10px;font-size:14px;color:var(--ink-2)}.bsum b{color:var(--ink)}
+.warn-t{color:var(--danger)}
+.bvars{margin:0 0 12px;font-size:13.5px}.bvars summary{cursor:pointer;color:var(--ink-2);font-weight:600}.bvars .chips{margin-top:8px;gap:6px 16px}
+.bnav{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.bpages{display:grid;gap:20px;max-width:1080px;margin-inline:auto}
+.bcover{display:grid;place-items:center;color:var(--ink-3);font-size:13px}.bpages.spread{grid-template-columns:1fr 1fr;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.bpage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:8px;min-width:0}
+.bpages.spread .bpage{border:0;border-radius:0;background:none}.bpages.spread .bpage:first-child{border-right:2px solid var(--line)}
+.bpage-h{display:flex;justify-content:space-between;font-family:var(--display);font-weight:600;font-size:14px}
+.bgrid{display:grid;gap:8px}
+.bslot{position:relative;border:0;padding:0;background:var(--surface-2);border-radius:9px;cursor:pointer;min-width:0;aspect-ratio:63/88}
+.bslot.empty{background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 6px,transparent 6px,transparent 12px);cursor:default;border:1px dashed var(--line)}
+.bslot .pocket{position:absolute;inset:0}
+.bslot:not(.own) .pocket{filter:grayscale(1);opacity:.35}
+.bslot.own .pocket{box-shadow:0 0 0 2px var(--gold),var(--shadow)}
+.btag{position:absolute;left:4px;top:4px;z-index:2;font:700 10px/1 var(--body);padding:3px 5px;border-radius:5px;background:var(--accent);color:var(--accent-ink)}
+.btag.plain{background:rgba(0,0,0,.55);color:#fff}
+.bnum{position:absolute;left:4px;bottom:4px;z-index:2;font:500 10px/1 var(--mono);padding:2px 4px;border-radius:4px;background:rgba(0,0,0,.6);color:#fff}
+.bk{position:absolute;right:4px;bottom:4px;z-index:2;font:600 10px/1 var(--mono);color:var(--ink-3)}
+.bslot.own .bk{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.mplist{display:grid;gap:3px}.mp{display:flex;gap:8px;justify-content:space-between;align-items:baseline;font-size:13px}
+.mp-s{font-size:11px;font-weight:700;padding:1px 6px;border-radius:5px;background:var(--surface-2);color:var(--ink-3)}.mp-s.ok{background:var(--ok);color:var(--bg)}.mp-s.own{background:var(--gold);color:var(--gold-ink)}
+.slot-hint{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--accent-soft);border-radius:8px;padding:8px 10px}
+.where{color:#FFD646}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -267,6 +295,7 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
       <button class="tab" role="tab" aria-selected="true" data-view="cat">Catalogue</button>
       <button class="tab" role="tab" aria-selected="false" data-view="col">Ma collection<span class="c" id="cCol">0</span></button>
       <button class="tab" role="tab" aria-selected="false" data-view="scan">Mode scan</button>
+      <button class="tab" role="tab" aria-selected="false" data-view="bind">Classeurs</button>
       <button class="tab" role="tab" aria-selected="false" data-view="set">Séries</button>
     </nav>
     <div class="backup">
@@ -314,10 +343,11 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
   <section id="view-scan" hidden>
     <div class="scan-setup">
       <div class="field sc-set"><label for="scSet">Série affichée</label><select id="scSet"></select><span class="note">La caméra reconnaît toutes les séries et affiche celle de la carte</span></div>
-      <div class="field"><label for="scBox">Rangement</label><input type="text" id="scBox" list="boxList" placeholder="Classeur bleu" autocomplete="off"></div>
+      <div class="field"><label for="scBox" id="scBoxLbl">Rangement</label><input type="text" id="scBox" list="boxList" placeholder="Classeur bleu" autocomplete="off"></div>
       <div class="field"><label for="scSpot">Emplacement</label><input type="text" id="scSpot" placeholder="Page 1" autocomplete="off"></div>
       <div class="field"><span class="lbl">Variante ajoutée</span><div class="seg" id="scVar"></div></div>
       <div class="field"><span class="lbl">État</span><div class="seg" id="scCond"></div></div>
+      <label class="check sc-master"><input type="checkbox" id="scMaster"> <span><b>Ranger en master set</b> : un classeur par série, chaque variante à sa case. La page et la case s’affichent à chaque ajout, les doubles vont dans le rangement ci-dessus.</span></label>
     </div>
     <div class="quickbar">
       <div class="field qnum"><label for="scNum">Numéro de la carte, puis Entrée</label><div class="qrow"><input type="text" id="scNum" placeholder="36 · 36r · TG05" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done"><button class="btn primary" type="button" id="scCam">Caméra</button></div></div>
@@ -333,6 +363,20 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
       </div>
     </div>
     <div id="scGrid" class="grid sgrid"></div>
+  </section>
+
+  <section id="view-bind" hidden>
+    <div class="tools btools">
+      <div class="field q"><label for="bSet">Série</label><select id="bSet"></select></div>
+      <div class="field"><label for="bFormat">Format des pages</label><select id="bFormat"><option value="">Automatique</option><option value="9">9 cases (3×3)</option><option value="12">12 cases (4×3)</option><option value="4">4 cases (2×2)</option></select></div>
+      <div class="field"><label for="bFaces">Pages par classeur</label><input type="number" id="bFaces" min="2" max="200" step="2" inputmode="numeric"></div>
+      <div class="field"><span class="lbl">Collection</span><button class="btn" type="button" id="bPlace">Ranger mes cartes ici</button></div>
+    </div>
+    <div class="bsum"><div id="bSummary"></div><div class="bar"><i id="bBar"></i></div></div>
+    <details class="bvars"><summary>Variantes comptées dans ce master set</summary><div id="bVars" class="chips"></div></details>
+    <div id="bBanner"></div>
+    <div class="bnav"><div class="chips" id="bBinders"></div><div class="chips"><button class="btn small" type="button" id="bPrev">‹ Précédente</button><span id="bPageInfo" class="num"></span><button class="btn small" type="button" id="bNext">Suivante ›</button></div></div>
+    <div id="bPages" class="bpages"></div>
   </section>
 
   <section id="view-set" hidden>
@@ -417,7 +461,7 @@ function cmpId(a,b){ const x=natKey(a),y=natKey(b); return x[0].localeCompare(y[
 function addCard(o){ o.hay = norm([o.name,o.en,o.set.name,o.set.en,o.set.code,o.set.oc].filter(Boolean).join(' ')) + ' ' + norm(o.lid+'/'+o.set.total) + ' #' + norm(o.lid); cards.push(o); byId.set(o.id,o); }
 for (const c of CAT.cards){
   const s = sets[c[0]];
-  addCard({id:s.id+'-'+c[1], set:s, lid:c[1], name:c[2], en:c[3]||'', rar:CAT.rarities[c[4]], type:c[5], cat:c[6], vars:c[7].split(''), img:null});
+  addCard({id:s.id+'-'+c[1], set:s, lid:c[1], name:c[2], en:c[3]||'', rar:CAT.rarities[c[4]], type:c[5], cat:c[6], vars:c[7].split('|'), img:null});
 }
 const nSetsAtStart = sets.length;
 function fillFilters(){
@@ -431,6 +475,7 @@ function fillFilters(){
   let html='<option value="">Toutes les séries</option>';
   for (const [g,list] of groups) html += `<optgroup label="${esc(g)}">`+list.map(s=>`<option value="${s.i}">${esc(s.name)}${s.date?' ('+s.date.slice(0,4)+')':''}</option>`).join('')+'</optgroup>';
   sel.innerHTML=html; if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+  fillBinderSets(html);
   const ss=$('#scSet'); if(ss){ ss.innerHTML=html.replace('<option value="">Toutes les séries</option>',''); const s=scanSet&&scanSet(); if(s) ss.value=String(s.i); }
 }
 function updateCatInfo(){ $('#catinfo').textContent = `${cards.length.toLocaleString('fr-FR')} cartes françaises · ${sets.length} séries · du Set de Base à aujourd’hui${CAT.built?' · catalogue du '+new Date(CAT.built).toLocaleDateString('fr-FR',{day:'numeric',month:'long'}):''}`; }
@@ -468,7 +513,7 @@ async function syncLive(){
       for (const b of bl){ addCard({id:b.id, set:s, lid:String(b.localId), name:b.name, en:'', rar:'None', type:-1, cat:'p', vars:['n','r'], img:b.image||null, noFr:!b.image, live:true}); s.n++; added++; }
     }
     info.innerHTML = `<span class="okc">Images et prix en direct (TCGdex)</span>`;
-    if (added) fillFilters();
+    if (added){ planCache.clear(); fillFilters(); }
     updateCatInfo();
     render(); if(openId) renderSheet();
     refreshOwnedPrices();
@@ -529,7 +574,7 @@ function pick(cm, suffix){
 }
 function marketPrice(cardId, variant){
   const p = prices[cardId]; if (!p || !p.cm) return null;
-  if (variant==='r'){ const v = pick(p.cm,'-holo'); if (v!=null) return v; }
+  if (String(variant).startsWith('r')){ const v = pick(p.cm,'-holo'); if (v!=null) return v; }
   return pick(p.cm,'');
 }
 function unitValue(e){
@@ -646,7 +691,7 @@ function renderCollection(){
       <div class="thumb" style="--tc:${tc(c)}">${thumbImg(c)}</div>
       <div style="min-width:0;display:grid;gap:3px">
         <div class="t">${esc(c.name)} <span style="font-family:var(--mono);font-weight:500;font-size:13px;color:var(--ink-2)">${esc(refOf(c))}</span></div>
-        <div class="s"><span>${esc(c.set.name)}</span><span class="pill">${esc(VAR_FR[e.variant]||e.variant)}</span><span class="pill">${esc(e.cond)}</span>${loc?`<span class="pill loc">${esc(loc)}</span>`:''}</div>
+        <div class="s"><span>${esc(c.set.name)}</span><span class="pill">${esc(vn(e.variant))}</span><span class="pill">${esc(e.cond)}</span>${loc?`<span class="pill loc">${esc(loc)}</span>`:''}</div>
       </div>
       <div class="v"><b>×${+e.qty||0}</b><span>${u.v!=null?eur((+e.qty||0)*u.v)+(u.src==='manuel'?' · manuel':''):u.src}</span></div>
     </div>`;
@@ -667,33 +712,34 @@ function renderSets(){
   for(const s of list){
     if(s.serie!==last){ html+=`<div class="sethead">${esc(s.serie)}</div>`; last=s.serie; }
     const have=counts.get(s.i)||0, pct=s.n?Math.round(have/s.n*100):0;
-    html+=`<button class="setrow" data-set="${s.i}"><div class="h"><b>${esc(s.name)}</b><span class="num">${have}/${s.n}</span></div><div class="bar"><i style="width:${pct}%"></i></div><div class="sub"><span>${esc(s.code||s.id)}${s.date?' · '+s.date.slice(0,4):''}</span><span>${pct} %</span></div></button>`;
+    let mf=0; const mp=have?planFor(s):null; if(mp) for(const x of mp.slots) if((varsById.get(x.c.id)||{})[x.v]) mf++;
+    html+=`<button class="setrow" data-set="${s.i}"><div class="h"><b>${esc(s.name)}</b><span class="num">${have}/${s.n}${mp?` · master ${mf}/${mp.slots.length}`:''}</span></div><div class="bar"><i style="width:${pct}%"></i></div><div class="sub"><span>${esc(s.code||s.id)}${s.date?' · '+s.date.slice(0,4):''}</span><span>${pct} %</span></div></button>`;
   }
   box.innerHTML=html;
 }
 function setSetFilter(f){ state.setFilter=f; $('#sStarted').setAttribute('aria-pressed',String(f==='started')); $('#sAllSets').setAttribute('aria-pressed',String(f==='all')); renderSets(); }
 
-function render(){ if(state.view==='cat') renderCatalog(); if(state.view==='col') renderCollection(); if(state.view==='set') renderSets(); if(state.view==='scan') renderScan(); }
-function switchView(v){ state.view=v; document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.view===v))); ['cat','col','scan','set'].forEach(x=>$('#view-'+x).hidden=x!==v); render(); if(v==='scan' && matchMedia('(pointer:fine)').matches) $('#scNum').focus(); }
+function render(){ if(state.view==='cat') renderCatalog(); if(state.view==='col') renderCollection(); if(state.view==='set') renderSets(); if(state.view==='scan') renderScan(); if(state.view==='bind') renderBinder(); }
+function switchView(v){ state.view=v; document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.view===v))); ['cat','col','scan','bind','set'].forEach(x=>$('#view-'+x).hidden=x!==v); if(v==='bind' && !bview.set) bview.set=scanSet().id; render(); if(v==='scan' && matchMedia('(pointer:fine)').matches) $('#scNum').focus(); }
 
 /* ---------- scan mode ---------- */
-const scan = Object.assign({set:null, variant:'n', cond:'NM', box:'', spot:'', own:''}, LS.get('classeur-fr-scan',{}));
+const scan = Object.assign({set:null, variant:'n', cond:'NM', box:'', spot:'', own:'', master:true}, LS.get('classeur-fr-scan',{}));
 const undo = [];
 const newId = () => 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const lidKey = s => String(s).toLowerCase().replace(/\s+/g,'').replace(/^([a-z]*)0*(\d)/,'$1$2');
 const VAR_SHORT = {n:'N',r:'R',h:'H','1':'1ʳᵉ',p:'W',l:'L',m:'M'};
-function saveScan(){ scan.box=$('#scBox').value; scan.spot=$('#scSpot').value; LS.set('classeur-fr-scan',{set:scan.set,variant:scan.variant,cond:scan.cond,box:scan.box,spot:scan.spot}); }
+function saveScan(){ scan.box=$('#scBox').value; scan.spot=$('#scSpot').value; scan.master=$('#scMaster').checked; LS.set('classeur-fr-scan',{set:scan.set,variant:scan.variant,cond:scan.cond,box:scan.box,spot:scan.spot,master:scan.master}); }
 function scanSet(){ return setById.get(scan.set) || [...sets].sort((a,b)=>b.date.localeCompare(a.date))[0]; }
 function scanCards(){ const s=scanSet(); return cards.filter(c=>c.set===s).sort((a,b)=>cmpId(a.lid,b.lid)); }
 function fillScanControls(){
-  $('#scVar').innerHTML=[['n','Normale'],['r','Reverse'],['h','Holo'],['1','1ʳᵉ édition']].map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.variant===k}">${l}</button>`).join('');
+  $('#scVar').innerHTML=[['n','Normale'],['r','Reverse'],['h','Holo'],['r.pokeball','Poké Ball'],['r.masterball','Master Ball'],['1','1ʳᵉ édition']].map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.variant===k}">${l}</button>`).join('');
   $('#scCond').innerHTML=COND.map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.cond===k}" title="${l}">${k}</button>`).join('');
 }
 function scanTile(c){
   const vc=varsById.get(c.id)||{}, tot=ownedById.get(c.id)||0;
   return `<div class="stile${tot?' owned':''}" data-id="${esc(c.id)}">
     <button class="add" type="button" data-add aria-label="Ajouter ${esc(c.name)} n° ${esc(c.lid)}">${tot?`<span class="badge">×${tot}</span>`:''}<div class="pocket">${pocket(c,'low')}</div></button>
-    <div class="scap"><span class="no">${esc(c.lid)}</span><span class="vc">${Object.entries(vc).map(([v,q])=>`<span title="${VAR_FR[v]||v}">${VAR_SHORT[v]||v}${q>1?'×'+q:''}</span>`).join('')}</span>${tot?'<button class="minus" type="button" data-minus aria-label="Retirer un exemplaire">−</button>':''}</div>
+    <div class="scap"><span class="no">${esc(c.lid)}</span><span class="vc">${Object.entries(vc).map(([v,q])=>`<span title="${vn(v)}">${vshort(v)}${q>1?'×'+q:''}</span>`).join('')}</span>${tot?'<button class="minus" type="button" data-minus aria-label="Retirer un exemplaire">−</button>':''}</div>
   </div>`;
 }
 function renderScan(){
@@ -709,7 +755,8 @@ function scanProgress(list){
   const have=list.filter(c=>ownedById.has(c.id)).length;
   const rv=list.filter(c=>c.vars.includes('r')), haveR=rv.filter(c=>(varsById.get(c.id)||{}).r).length;
   $('#scHave').textContent=`${have}/${list.length}`;
-  $('#scRev').textContent = rv.length ? `Reverse ${haveR}/${rv.length}` : '';
+  if (scan.master && list.length){ const plan=planFor(list[0].set); let f=0; for(const s of plan.slots) if((varsById.get(s.c.id)||{})[s.v]) f++; $('#scRev').textContent=`Master set ${f}/${plan.slots.length}`; }
+  else $('#scRev').textContent = rv.length ? `Reverse ${haveR}/${rv.length}` : '';
   $('#scBar').style.width=(list.length?have/list.length*100:0)+'%';
 }
 function patchTile(id){
@@ -721,14 +768,17 @@ function resolveVariant(c, v){ if(c.vars.includes(v)) return v; if(v==='n'&&c.va
 function scanAdd(c, v){
   saveScan();
   v = resolveVariant(c, v||scan.variant);
-  const box=scan.box.trim(), spot=scan.spot.trim(), cond=scan.cond;
+  let box=scan.box.trim(), spot=scan.spot.trim(), where=null, dbl=false; const cond=scan.cond;
+  // master set: the first copy goes to its own pocket, extra copies to the "doubles" place
+  if (scan.master){ const w=whereFor(c,v); if (w){ if (!placedIn(w,c,v)){ box=w.box; spot=w.spot; where=w; } else { dbl=true; box=scan.box.trim()||'Doubles'; } } }
   const same=[...entries].find(([,x])=>x.card===c.id&&x.variant===v&&x.cond===cond&&(x.box||'')===box&&(x.spot||'')===spot);
   let id, before=null;
   if (same){ id=same[0]; before={...same[1]}; entries.set(id,{...same[1], qty:(+same[1].qty||0)+1}); }
   else { id=newId(); entries.set(id,{card:c.id, variant:v, cond, qty:1, price:null, box, spot, added:Date.now()}); }
-  if (box) LS.set('classeur-fr-lastbox', box);
+  if (box && !where) LS.set('classeur-fr-lastbox', box);
   undo.push({id, before, card:c.id}); if (undo.length>200) undo.shift();
-  afterScanChange(c, `+1 ${VAR_FR[v]||v} · ${cond}`, !c.vars.includes(v));
+  afterScanChange(c, `+1 ${vn(v)} · ${cond}${where?` → page ${where.pos.page}, case ${where.pos.slot}`:dbl?` → ${box} (case déjà remplie)`:''}`, !c.vars.includes(v));
+  return {where, dbl, box, v};
 }
 function scanRemove(c){
   const all=[...entries].filter(([,x])=>x.card===c.id).sort((a,b)=>(b[1].added||0)-(a[1].added||0));
@@ -737,7 +787,7 @@ function scanRemove(c){
   const [id,x] = all.find(([,e])=>e.variant===v&&(e.box||'')===box&&(e.spot||'')===spot) || all.find(([,e])=>e.variant===v) || all[0];
   undo.push({id, before:{...x}, card:c.id});
   if ((+x.qty||0)>1) entries.set(id,{...x, qty:x.qty-1}); else entries.delete(id);
-  afterScanChange(c, `−1 ${VAR_FR[x.variant]||x.variant} · ${x.cond}`);
+  afterScanChange(c, `−1 ${vn(x.variant)} · ${x.cond}`);
 }
 function scanUndo(){
   const u=undo.pop(); if(!u) return;
@@ -779,7 +829,9 @@ $('#scCond').addEventListener('click', e=>{ const b=e.target.closest('button'); 
 $('#scSet').onchange=()=>{ scan.set=sets[+$('#scSet').value].id; saveScan(); undo.length=0; $('#scLast').innerHTML='<span class="note">Tape un numéro ou touche une carte pour l’ajouter.</span>'; renderScan(); };
 $('#scBox').addEventListener('input', saveScan); $('#scSpot').addEventListener('input', saveScan);
 document.querySelectorAll('[data-sown]').forEach(b=>b.onclick=()=>{ scan.own=b.dataset.sown; document.querySelectorAll('[data-sown]').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); renderScan(); });
-$('#scBox').value=scan.box||''; $('#scSpot').value=scan.spot||''; fillScanControls();
+$('#scBox').value=scan.box||''; $('#scSpot').value=scan.spot||''; $('#scMaster').checked=scan.master!==false; fillScanControls(); updateMasterUI();
+function updateMasterUI(){ const m=$('#scMaster').checked; $('#scBoxLbl').textContent=m?'Doubles vers':'Rangement'; $('#scBox').placeholder=m?'Doubles':'Classeur bleu'; }
+$('#scMaster').onchange=()=>{ saveScan(); updateMasterUI(); renderScan(); };
 
 
 /*VISION*/
@@ -866,7 +918,7 @@ function showDiag(r, d, ms, good){
 }
 function camStatus(t, cls){ const s=$('#camStatus'); s.textContent=t; s.className='cam-status'+(cls?' '+cls:''); }
 function fillCamVar(){
-  $('#camVar').innerHTML=[['n','Normale'],['r','Reverse'],['h','Holo']].map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.variant===k}">${l}</button>`).join('');
+  $('#camVar').innerHTML=[['n','Normale'],['r','Reverse'],['h','Holo'],['r.pokeball','Poké Ball'],['r.masterball','Master Ball']].map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${scan.variant===k}">${l}</button>`).join('');
   $('#camSet').textContent = cam.mode==='global' ? 'Toutes les cartes françaises' : `${scanSet().name}${scanSet().code?' · '+scanSet().code:''}`;
   $('#camDiagBtn').setAttribute('aria-pressed', String(cam.diag)); $('#camDiag').hidden=!cam.diag;
   $('#camAuto').checked=cam.auto; $('#camDup').checked=cam.warnDup;
@@ -944,15 +996,16 @@ function handleCard(d){
 }
 function camAdd(c){
   if (c.set!==scanSet()){ scan.set=c.set.id; saveScan(); }
-  scanAdd(c); cam.pending=null; cam.session.set(c.set.id,(cam.session.get(c.set.id)||0)+1);
+  const res=scanAdd(c); cam.pending=null; cam.session.set(c.set.id,(cam.session.get(c.set.id)||0)+1); cam.lastRes=res;
   if (!cam.block || cam.block.key!==normName(c.name)) cam.block={key:normName(c.name), t:Date.now()};
-  showAdded(c); camStatus('Ajoutée ! Retire la carte et passe à la suivante', 'ok');
+  showAdded(c, res); camStatus(res&&res.where?`Range-la page ${res.where.pos.page}, case ${res.where.pos.slot}`:'Ajoutée ! Retire la carte et passe à la suivante', 'ok');
   try{ if (navigator.vibrate) navigator.vibrate(60); }catch(e){}
 }
 function cardLine(c, extra, acts){
   return `<div class="cam-card"><div class="thumb" style="--tc:${tc(c)}">${thumbImg(c)}</div><div class="txt"><b>${esc(c.name)}</b><span>${esc(c.set.name)} · ${esc(refOf(c))}</span>${extra?`<span>${extra}</span>`:''}</div><div class="acts">${acts}</div></div>`;
 }
-function showAdded(c){ cam.shown=c; const q=ownedById.get(c.id)||0; $('#camResult').innerHTML=cardLine(c, `${esc(VAR_FR[resolveVariant(c,scan.variant)]||'')} · ${q} en tout`, '<button class="btn small" type="button" data-camplus aria-label="Ajouter un autre exemplaire">+1</button><button class="btn small" type="button" data-camundo>Annuler</button>'); }
+function showAdded(c, res){ cam.shown=c; const q=ownedById.get(c.id)||0; const place = res&&res.where ? `<b class="where">${esc(res.where.box)} · page ${res.where.pos.page} · case ${res.where.pos.slot}</b> (ligne ${res.where.pos.row}, col. ${res.where.pos.col})` : res&&res.dbl ? `Case déjà remplie : ce double va dans « ${esc(res.box)} »` : '';
+  $('#camResult').innerHTML=cardLine(c, `${esc(vn(res?res.v:resolveVariant(c,scan.variant)))} · ${q} en tout${place?'<br>'+place:''}`, '<button class="btn small" type="button" data-camplus aria-label="Ajouter un autre exemplaire">+1</button><button class="btn small" type="button" data-camundo>Annuler</button>'); }
 function showConfirm(c){ $('#camResult').innerHTML=cardLine(c, 'À confirmer', '<button class="btn small primary" type="button" data-camok>Ajouter</button><button class="btn small" type="button" data-camno>Pas ça</button>'); }
 function showDup(c){
   const mine=[...entries.values()].filter(e=>e.card===c.id), q=mine.reduce((n,e)=>n+(+e.qty||0),0), where=[...new Set(mine.map(locLabel).filter(Boolean))].join(', ');
@@ -968,7 +1021,7 @@ $('#cam').addEventListener('click', e=>{
   if (e.target.closest('[data-camok]') && cam.pending && cam.pending.c) return camAdd(cam.pending.c);
   if (e.target.closest('[data-camplus]') && cam.shown) return camAdd(cam.shown);
   if (e.target.closest('[data-camno]')){ cam.pending=null; $('#camResult').innerHTML=''; camStatus('Pas ajoutée. Passe à la carte suivante'); return; }
-  if (e.target.closest('[data-camundo]')){ scanUndo(); if(cam.shown) showAdded(cam.shown); camStatus('Dernier ajout annulé'); return; }
+  if (e.target.closest('[data-camundo]')){ scanUndo(); if(cam.shown) showAdded(cam.shown, null); camStatus('Dernier ajout annulé'); return; }
   const vb=e.target.closest('#camVar button'); if (vb){ scan.variant=vb.dataset.v; saveScan(); fillCamVar(); fillScanControls(); }
 });
 $('#camClose').onclick=closeCam;
@@ -992,17 +1045,134 @@ $('#camPhoto').onchange=async ev=>{
 };
 $('#scCam').onclick=openCam;
 
+/* ---------- master-set binders: every variant of every card has its own pocket ---------- */
+const PAT_FR = {pokeball:'Poké Ball', masterball:'Master Ball', energy:'Énergie', 'team-rocket':'Team Rocket', duskball:'Sombre Ball', loveball:'Love Ball', friendball:'Copain Ball', quickball:'Rapide Ball', shadowless:'Shadowless'};
+const PAT_SHORT = {pokeball:'PB', masterball:'MB', energy:'É', 'team-rocket':'TR', duskball:'SB', loveball:'LB', friendball:'CB', quickball:'RB', shadowless:'SL'};
+const PAT_ORDER = ['pokeball','masterball','energy','team-rocket','friendball','loveball','quickball','duskball'];
+function vn(code){ if(!code) return ''; const [b,p]=String(code).split('.'); if(!p) return VAR_FR[b]||b; const pn=PAT_FR[p]||p.replace(/-/g,' ');
+  return b==='r' ? `Reverse ${pn}` : (p==='shadowless' ? (b==='h'?'Holo Shadowless':'Shadowless') : `${VAR_FR[b]||b} ${pn}`); }
+function vshort(code){ const [b,p]=String(code).split('.'); return p ? (PAT_SHORT[p]||p.slice(0,2).toUpperCase()) : (VAR_SHORT[b]||b); }
+function vrank(code){ const [b,p]=String(code).split('.'); const base={'1':0,n:1,h:2,r:3,p:5,l:6,m:7}[b]; if(!p) return base??9;
+  if(p==='shadowless') return base+0.5; const i=PAT_ORDER.indexOf(p); return 4+(i<0?PAT_ORDER.length:i)/100; }
+const BINDERS = {4:{cols:2,rows:2}, 9:{cols:3,rows:3}, 12:{cols:4,rows:3}};
+let binderCfg = LS.get('classeur-fr-binders', {});
+const planCache = new Map();
+function saveBinderCfg(){ LS.set('classeur-fr-binders', binderCfg); planCache.clear(); }
+// variants kept in the master set of a card (catalogue variants, minus excluded ones, plus patterns added by hand for incomplete sets)
+function masterVars(c, cfg){
+  let v=c.vars.filter(x=>!(cfg.exclude||[]).includes(x));
+  if (cfg.addPatterns && v.includes('r')) for (const p of cfg.addPatterns){ const k='r.'+p; if(!v.includes(k)) v.push(k); }
+  return v.sort((a,b)=>vrank(a)-vrank(b));
+}
+function binderPlan(set){
+  const cfg=binderCfg[set.id]||{}, list=cards.filter(c=>c.set===set).sort((a,b)=>cmpId(a.lid,b.lid)), slots=[];
+  for (const c of list) for (const v of masterVars(c,cfg)) slots.push({c, v});
+  const faces=Math.max(2, Math.min(200, +cfg.faces||40));
+  const pocket = BINDERS[cfg.pocket] ? +cfg.pocket : (slots.length<=9*faces ? 9 : 12);
+  const {cols, rows}=BINDERS[pocket], cap=pocket*faces, nb=Math.max(1, Math.ceil(slots.length/cap));
+  const index=new Map(slots.map((s,i)=>[s.c.id+'|'+s.v, i]));
+  const allVars=[...new Set(list.flatMap(c=>c.vars))].sort((a,b)=>vrank(a)-vrank(b));
+  return {set, cfg, slots, pocket, cols, rows, faces, cap, nb, index, auto:!BINDERS[cfg.pocket], allVars};
+}
+function planFor(set){ let p=planCache.get(set.id); if(!p){ p=binderPlan(set); planCache.set(set.id,p); } return p; }
+function slotPos(plan, i){ const b=Math.floor(i/plan.cap), j=i%plan.cap, k=j%plan.pocket; return {i, binder:b+1, page:Math.floor(j/plan.pocket)+1, slot:k+1, row:Math.floor(k/plan.cols)+1, col:k%plan.cols+1}; }
+function binderName(plan, b){ return `Classeur ${plan.set.name}${plan.nb>1?' '+b+'/'+plan.nb:''}`; }
+function whereFor(c, v){
+  const plan=planFor(c.set), i=plan.index.get(c.id+'|'+v); if (i==null) return null;
+  const pos=slotPos(plan,i); return {plan, pos, box:binderName(plan,pos.binder), spot:`Page ${pos.page} · case ${pos.slot}`};
+}
+function placedIn(w, c, v){ return [...entries.values()].some(e=>e.card===c.id && e.variant===v && e.box===w.box && e.spot===w.spot); }
+function whereText(w){ return `${w.box} · page ${w.pos.page} · case ${w.pos.slot} (ligne ${w.pos.row}, colonne ${w.pos.col})`; }
+
+/* ---------- binder view ---------- */
+const bview = { set:null, page:1, binder:1 };
+function fillBinderSets(html){ const s=$('#bSet'); if(!s) return; s.innerHTML=html.replace('<option value="">Toutes les séries</option>',''); }
+function renderBinder(){
+  const set = setById.get(bview.set) || scanSet(); if(!set) return; bview.set=set.id; $('#bSet').value=String(set.i);
+  const plan=planFor(set), cfg=plan.cfg;
+  const pagesInBinder=b=>Math.ceil(Math.min(plan.cap, plan.slots.length-(b-1)*plan.cap)/plan.pocket);
+  bview.binder=Math.min(Math.max(1,bview.binder),plan.nb); const np=pagesInBinder(bview.binder); bview.page=Math.min(Math.max(1,bview.page),np);
+  // progress: a pocket counts as filled when you own that card in that variant
+  let filled=0, placed=0;
+  for (const s of plan.slots){ const own=(varsById.get(s.c.id)||{})[s.v]; if(own) filled++; }
+  for (const s of plan.slots){ const w=whereFor(s.c,s.v); if(w && placedIn(w,s.c,s.v)) placed++; }
+  $('#bFormat').value = plan.auto ? '' : String(plan.pocket); $('#bFaces').value = plan.faces;
+  $('#bSummary').innerHTML = `<b class="num">${filled}/${plan.slots.length}</b> emplacements remplis · ${plan.pocket} cases (${plan.cols}×${plan.rows})${plan.auto?' choisies automatiquement':''} · ${Math.ceil(plan.slots.length/plan.pocket)} pages${plan.nb>1?` · <b>${plan.nb} classeurs</b> de ${plan.faces} pages`:''}${placed<filled?` · <span class="warn-t">${filled-placed} carte${filled-placed>1?'s':''} pas encore rangée${filled-placed>1?'s':''} ici</span>`:''}`;
+  $('#bBar').style.width=(plan.slots.length?filled/plan.slots.length*100:0)+'%';
+  $('#bVars').innerHTML = plan.allVars.map(v=>`<label class="check"><input type="checkbox" data-bvar="${esc(v)}" ${(cfg.exclude||[]).includes(v)?'':'checked'}> ${esc(vn(v))}</label>`).join('')
+    + (plan.allVars.includes('r') ? ['pokeball','masterball'].filter(p=>!plan.allVars.includes('r.'+p)).map(p=>`<label class="check" title="Si la base de cartes ne les connaît pas encore pour cette série"><input type="checkbox" data-badd="${p}" ${(cfg.addPatterns||[]).includes(p)?'checked':''}> + Reverse ${PAT_FR[p]} à chaque reverse</label>`).join('') : '');
+  $('#bBinders').innerHTML = plan.nb>1 ? Array.from({length:plan.nb},(_,k)=>`<button class="chip" type="button" data-bbinder="${k+1}" aria-pressed="${bview.binder===k+1}">Classeur ${k+1}</button>`).join('') : '';
+  $('#bPageInfo').textContent = `Page ${bview.page} / ${np}`;
+  $('#bPrev').disabled = bview.page<=1; $('#bNext').disabled = bview.page>=np;
+  // an open binder shows two facing pages (verso of one sheet, recto of the next): page 1 alone, then 2-3, 4-5...
+  const wide = matchMedia('(min-width: 900px)').matches, pages=[];
+  if (wide){ const p=bview.page; if (p===1) pages.push(0,1); else { const left=p%2===0?p:p-1; pages.push(left); if(left+1<=np) pages.push(left+1); } } else pages.push(bview.page);
+  $('#bPages').innerHTML = pages.map(p=>binderPage(plan, bview.binder, p)).join('');
+  $('#bPages').className = 'bpages'+(pages.length>1?' spread':'');
+}
+function binderPage(plan, b, p){
+  if (p===0) return '<div class="bpage bcover"><span>Intérieur de la couverture</span></div>';
+  const start=(b-1)*plan.cap+(p-1)*plan.pocket, cells=[];
+  for (let k=0;k<plan.pocket;k++){
+    const i=start+k, s=plan.slots[i];
+    if (!s){ cells.push('<div class="bslot empty"></div>'); continue; }
+    const own=(varsById.get(s.c.id)||{})[s.v]||0;
+    cells.push(`<button type="button" class="bslot${own?' own':''}" data-id="${esc(s.c.id)}" data-v="${esc(s.v)}" title="${esc(s.c.name)} · ${esc(s.c.lid)} · ${esc(vn(s.v))}${own?'':' (manquante)'}">
+      <div class="pocket">${pocket(s.c,'low')}</div><span class="btag${s.v==='n'||s.v==='h'?' plain':''}">${esc(vshort(s.v))}</span><span class="bnum">${esc(s.c.lid)}</span><span class="bk">${k+1}</span></button>`);
+  }
+  return `<div class="bpage"><div class="bpage-h"><span>Page ${p}</span><span class="note">${p%2?'recto':'verso'}</span></div><div class="bgrid" style="grid-template-columns:repeat(${plan.cols},minmax(0,1fr))">${cells.join('')}</div></div>`;
+}
+// give a binder place to cards already in the collection (one copy per pocket, the others stay where they are)
+function planPlacement(plan){
+  const moves=[];
+  for (const s of plan.slots){
+    const w=whereFor(s.c,s.v); if(!w || placedIn(w,s.c,s.v)) continue;
+    const src=[...entries].filter(([,e])=>e.card===s.c.id && e.variant===s.v && !/^Classeur /.test(e.box||'')).sort((a,b)=>(a[1].added||0)-(b[1].added||0))[0];
+    if (src) moves.push({id:src[0], e:src[1], w});
+  }
+  return moves;
+}
+function applyPlacement(moves){
+  for (const m of moves){
+    const e=entries.get(m.id); if(!e) continue;
+    if ((+e.qty||0)>1){ entries.set(m.id,{...e, qty:e.qty-1}); entries.set(newId(),{...e, qty:1, box:m.w.box, spot:m.w.spot}); }
+    else entries.set(m.id,{...e, box:m.w.box, spot:m.w.spot});
+  }
+  saveEntries(); recompute();
+}
+$('#bSet').onchange=()=>{ bview.set=sets[+$('#bSet').value].id; bview.page=1; bview.binder=1; $('#bBanner').innerHTML=''; renderBinder(); };
+$('#bPrev').onclick=()=>{ const wide=matchMedia('(min-width: 900px)').matches; bview.page = wide ? (bview.page<=3?1:(bview.page%2===0?bview.page-2:bview.page-3)) : bview.page-1; renderBinder(); };
+$('#bNext').onclick=()=>{ const wide=matchMedia('(min-width: 900px)').matches; bview.page = wide ? (bview.page===1?2:(bview.page%2===0?bview.page+2:bview.page+1)) : bview.page+1; renderBinder(); };
+$('#bFormat').onchange=()=>{ const set=setById.get(bview.set), c=binderCfg[set.id]={...(binderCfg[set.id]||{})}; if($('#bFormat').value) c.pocket=+$('#bFormat').value; else delete c.pocket; saveBinderCfg(); renderBinder(); };
+$('#bFaces').onchange=()=>{ const set=setById.get(bview.set), c=binderCfg[set.id]={...(binderCfg[set.id]||{})}; c.faces=Math.max(2,Math.min(200,+$('#bFaces').value||40)); saveBinderCfg(); renderBinder(); };
+$('#bVars').addEventListener('change', e=>{
+  const set=setById.get(bview.set), c=binderCfg[set.id]={...(binderCfg[set.id]||{})};
+  const v=e.target.dataset.bvar, p=e.target.dataset.badd;
+  if (v){ const ex=new Set(c.exclude||[]); if(e.target.checked) ex.delete(v); else ex.add(v); c.exclude=[...ex]; }
+  if (p){ const ad=new Set(c.addPatterns||[]); if(e.target.checked) ad.add(p); else ad.delete(p); c.addPatterns=[...ad]; }
+  saveBinderCfg(); renderBinder();
+});
+$('#bBinders').addEventListener('click', e=>{ const b=e.target.closest('[data-bbinder]'); if(!b) return; bview.binder=+b.dataset.bbinder; bview.page=1; renderBinder(); });
+$('#bPages').addEventListener('click', e=>{ const s=e.target.closest('.bslot[data-id]'); if(s) openSheet(s.dataset.id, null, s.dataset.v); });
+$('#bPlace').onclick=()=>{
+  const plan=planFor(setById.get(bview.set)), moves=planPlacement(plan), bn=$('#bBanner');
+  if (!moves.length){ bn.innerHTML='<div class="banner"><span>Toutes tes cartes de cette série ont déjà leur place dans le classeur.</span></div>'; return; }
+  bn.innerHTML=`<div class="banner"><span>${moves.length} carte${moves.length>1?'s':''} de ta collection vont recevoir leur emplacement dans le classeur. Un seul exemplaire par case : les autres restent à leur rangement actuel.</span><span class="chips"><button class="btn small primary" type="button" id="bDo">Ranger</button><button class="btn small" type="button" id="bNo">Annuler</button></span></div>`;
+  $('#bDo').onclick=()=>{ applyPlacement(moves); bn.innerHTML=`<div class="banner"><span>C’est fait : ${moves.length} carte${moves.length>1?'s':''} rangée${moves.length>1?'s':''}. Leur page et leur case apparaissent dans Ma collection.</span></div>`; };
+  $('#bNo').onclick=()=>bn.innerHTML='';
+};
+
 /* ---------- Cardmarket links ---------- */
 const CM_COND = {MT:1,NM:2,EX:3,GD:4,LP:5,PL:6,PO:7};
-function cmId(c, variant){ const p=prices[c.id]; if(!p) return null; return (p.vp&&(p.vp[variant]||p.vp.n)) || (p.cm&&p.cm.idProduct) || null; }
+function cmId(c, variant){ const p=prices[c.id]; if(!p) return null; return (p.vp&&(p.vp[variant]||p.vp[String(variant).split('.')[0]]||p.vp.n)) || (p.cm&&p.cm.idProduct) || null; }
 function cmUrl(c, variant, cond, fr){
   const id=cmId(c, variant);
-  const q=[]; if(fr) q.push('language=2'); if(variant==='r') q.push('isReverseHolo=Y'); if(variant==='1') q.push('isFirstEd=Y'); if(cond&&CM_COND[cond]) q.push('minCondition='+CM_COND[cond]);
+  const q=[]; if(fr) q.push('language=2'); if(String(variant).startsWith('r')) q.push('isReverseHolo=Y'); if(variant==='1') q.push('isFirstEd=Y'); if(cond&&CM_COND[cond]) q.push('minCondition='+CM_COND[cond]);
   if (id) return `https://www.cardmarket.com/fr/Pokemon/Products?idProduct=${id}${q.length?'&'+q.join('&'):''}`;
   return `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(c.en||c.name)}`;
 }
 function cmLinks(c, variant, cond){
-  const exact=!!cmId(c, variant), vl=variant==='r'?' · reverse':variant==='1'?' · 1ʳᵉ édition':'';
+  const exact=!!cmId(c, variant), vl=String(variant).startsWith('r')?' · '+vn(variant).toLowerCase():variant==='1'?' · 1ʳᵉ édition':'';
   return `<div style="display:grid;gap:4px">
     <a class="link" href="${esc(cmUrl(c,variant,cond,true))}" target="_blank" rel="noopener">Annonces en français${vl} · ${esc(cond)} ou mieux ↗</a>
     <a class="link" style="font-weight:500;font-size:13px" href="${esc(cmUrl(c,variant,cond,false))}" target="_blank" rel="noopener">Toutes langues ↗</a>
@@ -1010,16 +1180,29 @@ function cmLinks(c, variant, cond){
 }
 /* ---------- sheet ---------- */
 let openId=null, form=null, editing=null, confirmDel=null, priceState='';
-function openSheet(id, entryId){
+function openSheet(id, entryId, preVar){
   const c=byId.get(id); if(!c) return;
   openId=id; confirmDel=null;
   if(entryId && entries.has(entryId)){ editing=entryId; const e=entries.get(entryId); form={variant:e.variant,cond:e.cond,qty:+e.qty||1,price:e.price??'',box:e.box||'',spot:e.spot||''}; }
-  else { editing=null; const lastBox=LS.get('classeur-fr-lastbox',''); form={variant:c.vars.includes('n')?'n':c.vars[0],cond:'NM',qty:1,price:'',box:lastBox,spot:''}; }
+  else { editing=null; const lastBox=LS.get('classeur-fr-lastbox',''); const v0=preVar&&c.vars.includes(preVar)?preVar:(c.vars.includes('n')?'n':c.vars[0]);
+    form={variant:v0,cond:'NM',qty:1,price:'',box:lastBox,spot:''};
+    if (scan.master){ const w=whereFor(c,v0); if(w && !placedIn(w,c,v0)){ form.box=w.box; form.spot=w.spot; } } }
   $('#scrim').hidden=false; $('#sheet').hidden=false;
   priceState = prices[id] && Date.now()-prices[id].t<DAY ? '' : 'loading';
   renderSheet(); $('#shClose').focus();
   if (online) fetchPrice(id).then(()=>{ priceState=''; if(openId===id){ keepForm(); renderSheet(); } recompute(); }).catch(()=>{ priceState='error'; if(openId===id){ keepForm(); renderSheet(); } });
   else priceState='offline';
+}
+function masterPlaces(c){
+  const plan=planFor(c.set), vs=masterVars(c, plan.cfg); if(!vs.length) return '';
+  const rows=vs.map(v=>{ const w=whereFor(c,v); if(!w) return ''; const own=(varsById.get(c.id)||{})[v], ok=own&&placedIn(w,c,v);
+    return `<div class="mp"><span>${esc(vn(v))}</span><span class="num">p. ${w.pos.page} · case ${w.pos.slot}${plan.nb>1?' · classeur '+w.pos.binder:''}</span><span class="mp-s ${ok?'ok':own?'own':''}">${ok?'rangée':own?'à ranger':'manquante'}</span></div>`; }).join('');
+  return `<dt>Classeur</dt><dd class="mplist">${rows}</dd>`;
+}
+function slotHint(c){
+  const w=whereFor(c, form.variant); if(!w) return '';
+  const here = form.box===w.box && form.spot===w.spot;
+  return `<div class="field full slot-hint"><span class="note">Master set : <b>${esc(w.box)} · page ${w.pos.page} · case ${w.pos.slot}</b> (ligne ${w.pos.row}, colonne ${w.pos.col})</span>${here?'':'<button class="btn small" type="button" data-act="useslot">Utiliser cet emplacement</button>'}</div>`;
 }
 function closeSheet(){ openId=null; $('#scrim').hidden=true; $('#sheet').hidden=true; }
 function keepForm(){ const p=$('#price'), b=$('#box'), s=$('#spot'); if(p) form.price=p.value; if(b) form.box=b.value; if(s) form.spot=s.value; }
@@ -1054,19 +1237,21 @@ function renderSheet(){
         <dt>Rareté</dt><dd>${esc(RAR_FR[c.rar]||c.rar)}</dd>
         <dt>Bloc</dt><dd>${esc(c.set.serie)}</dd>
         ${c.set.date?`<dt>Sortie</dt><dd>${new Date(c.set.date).toLocaleDateString('fr-FR',{year:'numeric',month:'long',day:'numeric'})}</dd>`:''}
-        <dt>Variantes</dt><dd>${c.vars.map(v=>VAR_FR[v]||v).join(', ')}</dd>
+        <dt>Variantes</dt><dd>${c.vars.map(v=>vn(v)).join(', ')}</dd>
+        ${masterPlaces(c)}
       </dl>
     </div>
     ${priceBlock(c)}
     ${mine.length?`<div class="entries"><h3 style="font-size:16px">Dans ton classeur</h3>${mine.map(([id,e])=>{ const u=unitValue(e), loc=locLabel(e); return `
-      <div class="entry"><div class="l"><b class="num">×${+e.qty||0}</b><span class="pill">${esc(VAR_FR[e.variant]||e.variant)}</span><span class="pill">${esc(e.cond)}</span>${loc?`<span class="pill loc">${esc(loc)}</span>`:''}<span class="num" style="font-size:13px;color:var(--ink-2)">${u.v!=null?eur(u.v)+' / u'+(u.src==='manuel'?' (manuel)':''):''}</span><a class="link" style="font-size:13px" href="${esc(cmUrl(c,e.variant,e.cond,true))}" target="_blank" rel="noopener" title="Annonces en français pour cet exemplaire">Annonces ↗</a></div>
+      <div class="entry"><div class="l"><b class="num">×${+e.qty||0}</b><span class="pill">${esc(vn(e.variant))}</span><span class="pill">${esc(e.cond)}</span>${loc?`<span class="pill loc">${esc(loc)}</span>`:''}<span class="num" style="font-size:13px;color:var(--ink-2)">${u.v!=null?eur(u.v)+' / u'+(u.src==='manuel'?' (manuel)':''):''}</span><a class="link" style="font-size:13px" href="${esc(cmUrl(c,e.variant,e.cond,true))}" target="_blank" rel="noopener" title="Annonces en français pour cet exemplaire">Annonces ↗</a></div>
       <div class="acts">${confirmDel===id?`<button class="btn small danger" data-act="del" data-id="${id}">Retirer</button><button class="btn small" data-act="nodel">Garder</button>`:`<button class="btn small" data-act="edit" data-id="${id}">Modifier</button><button class="btn small danger" data-act="askdel" data-id="${id}" aria-label="Retirer">✕</button>`}</div></div>`; }).join('')}</div>`:''}
     <form class="form" id="addForm">
       <h3>${editing?'Modifier cet exemplaire':'Ajouter à mon classeur'}</h3>
-      <div class="field full"><span class="lbl">Variante</span><div class="seg" data-f="variant">${variants.map(k=>`<button type="button" data-v="${k}" aria-pressed="${form.variant===k}">${VAR_FR[k]||k}</button>`).join('')}</div></div>
+      <div class="field full"><span class="lbl">Variante</span><div class="seg" data-f="variant">${variants.map(k=>`<button type="button" data-v="${k}" aria-pressed="${form.variant===k}">${vn(k)}</button>`).join('')}</div></div>
       <div class="field full"><span class="lbl">État</span><div class="seg" data-f="cond">${COND.map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${form.cond===k}" title="${l}">${k}</button>`).join('')}</div>
         <p class="note">${esc(COND.find(x=>x[0]===form.cond)[1])}${cfg.cond&&COEF[form.cond]<1?` · valeur estimée à ${Math.round(COEF[form.cond]*100)} % du prix de référence`:''}</p></div>
       <div class="field"><label for="box">Rangement</label><input type="text" id="box" list="boxList" placeholder="Classeur bleu" value="${esc(form.box)}" autocomplete="off"></div>
+      ${slotHint(c)}
       <div class="field"><label for="spot">Emplacement</label><input type="text" id="spot" placeholder="Page 4, case 7" value="${esc(form.spot)}" autocomplete="off"></div>
       <div class="field"><span class="lbl">Quantité</span><div class="stepper"><button type="button" data-step="-1" aria-label="Moins">−</button><output id="qtyOut" class="num">${form.qty}</output><button type="button" data-step="1" aria-label="Plus">+</button></div></div>
       <div class="field"><label for="price">Prix manuel (€)</label><input type="number" id="price" min="0" step="0.01" inputmode="decimal" placeholder="${est!=null?'auto : '+est.toFixed(2).replace('.',','):'optionnel'}" value="${esc(form.price)}"></div>
@@ -1082,6 +1267,7 @@ $('#shBody').addEventListener('click', e=>{
   if(a.dataset.act==='askdel'){ keepForm(); confirmDel=id; renderSheet(); }
   if(a.dataset.act==='nodel'){ keepForm(); confirmDel=null; renderSheet(); }
   if(a.dataset.act==='cancel'){ openSheet(openId); }
+  if(a.dataset.act==='useslot'){ keepForm(); const w=whereFor(byId.get(openId), form.variant); if(w){ form.box=w.box; form.spot=w.spot; renderSheet(); } }
   if(a.dataset.act==='del'){ entries.delete(id); saveEntries(); confirmDel=null; if(editing===id) editing=null; toast('Carte retirée du classeur'); recompute(); }
 });
 $('#shBody').addEventListener('submit', e=>{
@@ -1112,7 +1298,7 @@ $('#bkCsv').onclick=()=>{
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const lines=[['Nom','Série','Abréviation','Numéro','Variante','État','Quantité','Rangement','Emplacement','Valeur unitaire (€)','Source du prix','Valeur totale (€)'].map(q).join(';')];
   for(const e of entries.values()){ const c=byId.get(e.card); if(!c) continue; const u=unitValue(e);
-    lines.push([c.name,c.set.name,c.set.code||'',numOf(c),VAR_FR[e.variant]||e.variant,e.cond,e.qty,e.box||'',e.spot||'',u.v!=null?u.v.toFixed(2).replace('.',','):'',u.src,u.v!=null?(u.v*e.qty).toFixed(2).replace('.',','):''].map(q).join(';')); }
+    lines.push([c.name,c.set.name,c.set.code||'',numOf(c),vn(e.variant),e.cond,e.qty,e.box||'',e.spot||'',u.v!=null?u.v.toFixed(2).replace('.',','):'',u.src,u.v!=null?(u.v*e.qty).toFixed(2).replace('.',','):''].map(q).join(';')); }
   download(`classeur-pokemon-${today()}.csv`, '﻿'+lines.join('\r\n'), 'text/csv'); toast('Export tableur téléchargé');
 };
 $('#bkLoad').onclick=()=>$('#bkFile').click();
