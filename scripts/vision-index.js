@@ -37,7 +37,8 @@ async function pool(items, n, fn){ const q = [...items]; await Promise.all(Array
     const en = c.s ? `${ASSETS}/en/${c.s}/${c.set}/${encodeURIComponent(c.lid)}` : null;
     const fr = frImage.get(c.id) || (c.s ? `${ASSETS}/fr/${c.s}/${c.set}/${encodeURIComponent(c.lid)}` : null);
     const alt = c.alt ? `${ASSETS}/${c.alt}` : null;   // older print with the same artwork, for cards without a scan
-    return { id: c.id, urls: [...new Set([fr, en, alt].filter(Boolean))] };
+    const altEn = c.alt && c.alt.startsWith('fr/') ? `${ASSETS}/en/${c.alt.slice(3)}` : null;
+    return { id: c.id, urls: [...new Set([fr, en, alt, altEn].filter(Boolean))] };
   }).filter(j => j.urls.length);
 
   let cache = {};

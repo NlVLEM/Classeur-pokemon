@@ -552,7 +552,7 @@ function imgUrl(c, lang){ // FR scan (known from TCGdex, or built from the set p
   return null;
 }
 function imgChain(c){ const l=[]; const fr=imgUrl(c,'fr'), en=imgUrl(c,'en');
-  if (fr) l.push([fr,'']); if (en) l.push([en,'image EN']); if (c.alt) l.push([`${ASSETS}/${c.alt}`,'image d’origine']); return l; }
+  if (fr) l.push([fr,'']); if (en) l.push([en,'image EN']); if (c.alt){ l.push([`${ASSETS}/${c.alt}`,'image d’origine']); if (c.alt.startsWith('fr/')) l.push([`${ASSETS}/en/${c.alt.slice(3)}`,'image d’origine']); } return l; }
 function imgTag(c, size, withLabel){
   const l=imgChain(c); if (!l.length) return '';
   const rest=l.slice(1).map(([u,lab])=>u+'|'+lab).join(';');
