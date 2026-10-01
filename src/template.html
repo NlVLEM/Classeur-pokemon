@@ -473,6 +473,12 @@ function savePrices(){
 
 /* ---------- catalog ---------- */
 const CAT = JSON.parse(document.getElementById('catalog').textContent);
+// Cardmarket products checked at build time against Cardmarket's own catalogue (TCGdex sometimes gives a card the product of another one):
+// cardId -> [right product, its prices] or [0] when the right product is unknown (the link then searches by name)
+const CMFIX = CAT.cmfix || {}, CM_KEYS = ['avg','low','trend','avg1','avg7','avg30','avg-holo','low-holo','trend-holo','avg1-holo','avg7-holo','avg30-holo'];
+function fixedCm(id){ const f=CMFIX[id]; if (!f) return undefined; if (!f[0]) return null;
+  const o={idProduct:f[0], updated:CAT.built}; (f[1]||[]).forEach((v,i)=>{ if (v!=null) o[CM_KEYS[i]]=v; }); return o; }
+for (const id in CMFIX) if (prices[id]){ prices[id].cm=fixedCm(id); prices[id].vp={}; }
 let sets = CAT.sets.map((s,i)=>Object.assign(s,{i}));
 let cards = [], byId = new Map(), setById = new Map(sets.map(s=>[s.id,s]));
 function natKey(id){ const m=String(id).match(/^(\D*)(\d+)(.*)$/); return m?[m[1],+m[2],m[3]]:[String(id),0,'']; }
@@ -580,9 +586,9 @@ function fetchPrice(id, force){
   if (!force && p && Date.now()-p.t < DAY) return Promise.resolve(p);
   if (inflight.has(id)) return inflight.get(id);
   const pr = fetch(API+'/cards/'+encodeURIComponent(id)).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{
-    const cm = j.pricing && j.pricing.cardmarket || null;
+    const fx = fixedCm(id), cm = fx!==undefined ? fx : (j.pricing && j.pricing.cardmarket || null);
     const vp = {};
-    for (const d of (j.variants_detailed||[])){ const ty=String(d.type||'').toLowerCase(), k=/first|1st|premi/.test(ty)?'1':ty.startsWith('rev')?'r':ty.startsWith('holo')?'h':ty.startsWith('normal')?'n':null; const pid=d.thirdParty&&d.thirdParty.cardmarket || d.pricing&&d.pricing.cardmarket&&d.pricing.cardmarket.idProduct; if(k&&pid&&!vp[k]) vp[k]=pid; }
+    if (fx===undefined) for (const d of (j.variants_detailed||[])){ const ty=String(d.type||'').toLowerCase(), k=/first|1st|premi/.test(ty)?'1':ty.startsWith('rev')?'r':ty.startsWith('holo')?'h':ty.startsWith('normal')?'n':null; const pid=d.thirdParty&&d.thirdParty.cardmarket || d.pricing&&d.pricing.cardmarket&&d.pricing.cardmarket.idProduct; if(k&&pid&&!vp[k]) vp[k]=pid; }
     prices[id] = {t:Date.now(), cm, vp, upd: cm&&cm.updated||null};
     const c = byId.get(id);
     if (c && c.live){ // enrich cards not in the bundled catalog
@@ -1379,7 +1385,7 @@ window.addEventListener('online', ()=>{ if (syncOn()) runSync(); });
 
 /* ---------- Cardmarket links ---------- */
 const CM_COND = {MT:1,NM:2,EX:3,GD:4,LP:5,PL:6,PO:7};
-function cmId(c, variant){ const p=prices[c.id]; if(!p) return null; return (p.vp&&(p.vp[variant]||p.vp[String(variant).split('.')[0]]||p.vp.n)) || (p.cm&&p.cm.idProduct) || null; }
+function cmId(c, variant){ if (CMFIX[c.id]) return CMFIX[c.id][0]||null; const p=prices[c.id]; if(!p) return null; return (p.vp&&(p.vp[variant]||p.vp[String(variant).split('.')[0]]||p.vp.n)) || (p.cm&&p.cm.idProduct) || null; }
 function cmUrl(c, variant, cond, fr){
   const id=cmId(c, variant);
   const q=[]; if(fr) q.push('language=2'); if(String(variant).startsWith('r')) q.push('isReverseHolo=Y'); if(variant==='1') q.push('isFirstEd=Y'); if(cond&&CM_COND[cond]) q.push('minCondition='+CM_COND[cond]);
@@ -1432,6 +1438,7 @@ function priceBlock(c){
   const p=prices[c.id];
   if (priceState==='loading' && !p) return `<div class="price"><h3>Prix Cardmarket</h3><p class="note">Chargement des ventes…</p></div>`;
   if (priceState==='offline' && !p) return `<div class="price"><h3>Prix Cardmarket</h3><p class="note">Hors ligne : prix indisponible.</p></div>`;
+  if (CMFIX[c.id] && !CMFIX[c.id][0]) return `<div class="price"><h3>Prix Cardmarket</h3><p class="note">La fiche Cardmarket de cette carte n’est pas connue avec certitude : le lien lance une recherche par nom, et son prix est à saisir à la main si tu veux qu’elle compte dans la valeur.</p>${cmLinks(c, form.variant, form.cond)}</div>`;
   if (!p || !p.cm) return `<div class="price"><h3>Prix Cardmarket</h3><p class="note">${priceState==='error'?'Le prix n’a pas pu être chargé. Réessaie plus tard.':'Aucune vente enregistrée pour cette carte. Tu peux saisir un prix manuel.'}</p></div>`;
   const cm=p.cm, hasR=c.vars.includes('r') && ['avg30-holo','avg7-holo','trend-holo','low-holo'].some(k=>cm[k]!=null);
   const rows=[['avg30','Moy. ventes 30 j'],['avg7','Moy. ventes 7 j'],['avg1','Moy. ventes 24 h'],['trend','Tendance'],['low','Plus bas']];

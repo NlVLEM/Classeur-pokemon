@@ -62,6 +62,11 @@ function bonusOf(c, serieId) {
 }
 const base = path.join(ROOT, 'data'); let skipped = 0;
 const reprint = [], pool = [];   // reprint: one entry per catalogue card; pool: every print, including sets without a French release
+const cmAll = [], cmSetOrder = new Map();   // every card with its Cardmarket product, for scripts/cardmarket.js
+const cmMain = c => { if (c.thirdParty && c.thirdParty.cardmarket) return c.thirdParty.cardmarket;
+  const v = Array.isArray(c.variants) ? c.variants.filter(x => x.thirdParty && x.thirdParty.cardmarket) : [];
+  const x = v.find(x => !(x.stamp && [].concat(x.stamp).length) && x.type !== 'reverse') || v[0]; return x ? x.thirdParty.cardmarket : 0; };
+const cmRec = (c, set, lid, fr) => cmAll.push({ set: set.id, setOrder: cmSetOrder.get(set.id) ?? cmSetOrder.set(set.id, cmSetOrder.size).get(set.id), lid, en: c.name.en || '', moves: [...(c.attacks||[]), ...(c.abilities||[])].map(a => a.name && a.name.en), main: cmMain(c), fr });
 const nk = x => String(x||'').toLowerCase().normalize('NFD').replace(/[^a-z0-9|]+/g,'');
 const printKeys = (c, setObj, lang, p) => { const en=nk(c.name.en||c.name.fr), atk=(c.attacks||[]).map(a=>nk(a.name&&(a.name.en||a.name.fr))).join('|');
   return { k1:[en,c.hp||'',nk(c.illustrator),atk].join('#'), k2: atk ? [en,c.hp||'',atk].join('#') : null, date: typeof setObj.releaseDate==='string'?setObj.releaseDate:'', setId:setObj.id, path:`${lang}/${p}` }; };
@@ -74,7 +79,7 @@ for (const serieName of fs.readdirSync(base).sort()) {
     if (!fs.statSync(setDir).isDirectory()) continue;
     const set = load(path.join(sDir, setName + '.ts'));
     if (set && set.name && !set.name.fr){ // not released in French: still useful as an older print of a reprinted artwork
-      for (const f of fs.readdirSync(setDir).sort()){ if(!f.endsWith('.ts')) continue; const c=load(path.join(setDir,f)); if(c&&c.name&&(c.name.en)) pool.push(printKeys(c,set,'en',`${serie.id}/${set.id}/${f.replace(/\.ts$/,'')}`)); }
+      for (const f of fs.readdirSync(setDir).sort()){ if(!f.endsWith('.ts')) continue; const c=load(path.join(setDir,f)); if(c&&c.name&&(c.name.en)){ pool.push(printKeys(c,set,'en',`${serie.id}/${set.id}/${f.replace(/\.ts$/,'')}`)); cmRec(c,set,f.replace(/\.ts$/,''),false); } }
     }
     if (!set || !set.name || !set.name.fr) { skipped++; continue; }
     const si = sets.length; let count = 0;
@@ -86,6 +91,7 @@ for (const serieName of fs.readdirSync(base).sort()) {
       const cat = c.category === 'Trainer' ? 't' : c.category === 'Energy' ? 'e' : 'p';
       cards.push([si, f.replace(/\.ts$/, ''), c.name.fr, (c.name.en && c.name.en !== c.name.fr) ? c.name.en : 0, R(c.rarity), t, cat, variantsOf(c), (c.dexId && c.dexId[0]) || 0, bonusOf(c, serie.id) || 0]);
       { const r=printKeys(c,set,'fr',`${serie.id}/${set.id}/${f.replace(/\.ts$/,'')}`); reprint.push(r); pool.push(r); }
+      cmRec(c, set, f.replace(/\.ts$/, ''), true);
       count++;
     }
     if (!count) continue;
@@ -103,9 +109,14 @@ for (const serieName of fs.readdirSync(base).sort()) {
   reprint.forEach((r,i)=>{ const pick=l=>(l||[]).find(o=>o.setId!==r.setId && o.date && r.date && o.date<r.date);
     const o=pick(by1.get(r.k1)) || pick(r.k2&&by2.get(r.k2)); cards[i][10]=o?o.path:0; if(o) n++; });
   console.log(`Éditions d'origine repérées : ${n}`); }
+// Cardmarket products checked against Cardmarket's own catalogue (see scripts/cardmarket.js)
+const cmfix = {};
+{ const { fixes, report } = require('./cardmarket').checkCardmarket(cmAll, process.env.CARDMARKET_DIR || path.join(REPO, 'cardmarket'));
+  for (const [id, f] of fixes) cmfix[id] = f.price ? [f.id, f.price] : [f.id];
+  console.log(report); }
 if (cards.length < 15000) { console.error('Only ' + cards.length + ' cards found: the TCGdex layout may have changed, deployment stopped.'); process.exit(1); }
 const built = new Date().toISOString().slice(0, 10);
-const catalog = JSON.stringify({ v: 2, built, rarities, types: TYPES, sets, cards }).replace(/<\//g, '<\\/');
+const catalog = JSON.stringify({ v: 2, built, rarities, types: TYPES, sets, cards, cmfix }).replace(/<\//g, '<\\/');
 
 const SITE = path.join(REPO, 'site');
 fs.rmSync(SITE, { recursive: true, force: true });

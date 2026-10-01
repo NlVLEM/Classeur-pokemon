@@ -3,3 +3,4 @@ site/
 node_modules/
 vision-cache/
 vision-list.json
+cardmarket/

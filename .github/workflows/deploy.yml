@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "17 4 * * 1"   # every Monday at 04:17 UTC: new sets, new cards and their visual fingerprints
+    - cron: "17 4 * * *"   # every day at 04:17 UTC: new sets and cards, their visual fingerprints, corrected Cardmarket prices
   workflow_dispatch:        # "Run workflow" button in the Actions tab
 
 permissions:
@@ -30,6 +30,13 @@ jobs:
 
       - name: Télécharger la base de cartes TCGdex
         run: git clone --depth 1 https://github.com/tcgdex/cards-database.git tcgdex
+
+      - name: Télécharger le catalogue et les prix publics de Cardmarket
+        continue-on-error: true
+        run: |
+          mkdir -p cardmarket
+          curl -fsSL --retry 3 -o cardmarket/products_singles_6.json https://downloads.s3.cardmarket.com/productCatalog/productList/products_singles_6.json
+          curl -fsSL --retry 3 -o cardmarket/price_guide_6.json https://downloads.s3.cardmarket.com/productCatalog/priceGuide/price_guide_6.json
 
       - name: Construire le catalogue et la page
         run: node scripts/build.js
