@@ -66,7 +66,8 @@ const cmAll = [], cmSetOrder = new Map();   // every card with its Cardmarket pr
 const cmMain = c => { if (c.thirdParty && c.thirdParty.cardmarket) return c.thirdParty.cardmarket;
   const v = Array.isArray(c.variants) ? c.variants.filter(x => x.thirdParty && x.thirdParty.cardmarket) : [];
   const x = v.find(x => !(x.stamp && [].concat(x.stamp).length) && x.type !== 'reverse') || v[0]; return x ? x.thirdParty.cardmarket : 0; };
-const cmRec = (c, set, lid, fr) => cmAll.push({ set: set.id, setOrder: cmSetOrder.get(set.id) ?? cmSetOrder.set(set.id, cmSetOrder.size).get(set.id), lid, en: c.name.en || '', moves: [...(c.attacks||[]), ...(c.abilities||[])].map(a => a.name && a.name.en), main: cmMain(c), fr });
+const cmRec = (c, set, lid, fr) => cmAll.push({ set: set.id, setOrder: cmSetOrder.get(set.id) ?? cmSetOrder.set(set.id, cmSetOrder.size).get(set.id), lid, en: c.name.en || '', moves: [...(c.attacks||[]), ...(c.abilities||[])].map(a => a.name && a.name.en), main: cmMain(c), fr, rar: c.rarity || '',
+  stamped: (Array.isArray(c.variants) ? c.variants : []).filter(x => x.stamp && [].concat(x.stamp).length && !/1st/.test([].concat(x.stamp).join()) && x.thirdParty && x.thirdParty.cardmarket).map(x => x.thirdParty.cardmarket) });
 const nk = x => String(x||'').toLowerCase().normalize('NFD').replace(/[^a-z0-9|]+/g,'');
 const printKeys = (c, setObj, lang, p) => { const en=nk(c.name.en||c.name.fr), atk=(c.attacks||[]).map(a=>nk(a.name&&(a.name.en||a.name.fr))).join('|');
   return { k1:[en,c.hp||'',nk(c.illustrator),atk].join('#'), k2: atk ? [en,c.hp||'',atk].join('#') : null, ill: nk(c.illustrator), date: typeof setObj.releaseDate==='string'?setObj.releaseDate:'', setId:setObj.id, path:`${lang}/${p}` }; };

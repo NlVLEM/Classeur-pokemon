@@ -71,7 +71,11 @@ function checkCardmarket(all, dir) {
   for (const p of P.values()) { if (!byExp.has(p.exp)) byExp.set(p.exp, []); byExp.get(p.exp).push(p); }
   const groups = new Map();
   for (const c of todo) { if (!groups.has(c.exp)) groups.set(c.exp, []); groups.get(c.exp).push(c); }
-  const pick = new Map(); let unique = 0, ordered = 0, kept = 0, lost = 0;
+  const avg = id => { const g = G.get(id); return g ? (g.avg30 || g.trend || g.avg || g.low || null) : null; };
+  const rank = r => /special illustration|secret|hyper|black white|gold|rainbow/i.test(r) ? 6
+    : /ultra|illustration rare|full art|radiant|amazing|shiny|ace spec|prime|legend|lv\.?x|v$|vmax|vstar|classic|futuristic|rgb|mega attack/i.test(r) ? 5
+    : /holo|double rare|promo|pikachu rare/i.test(r) ? 4 : /^rare$/i.test(r) ? 3 : /uncommon/i.test(r) ? 2 : /common/i.test(r) ? 1 : 4;
+  const pick = new Map(); let unique = 0, ordered = 0, kept = 0, lost = 0, flipped = 0;
   for (const [exp, cs] of groups) {
     const pool = (byExp.get(exp) || []).filter(p => !owned.has(p.id));
     const clusters = new Map();
@@ -89,7 +93,16 @@ function checkCardmarket(all, dir) {
       // one card and several possible products: keep the TCGdex one if it is among them, otherwise it cannot be told apart
       if (members.length === 1 && avail.length > 1) { const c = members[0]; if (avail.includes(c.main)) { used.add(c.main); kept++; } else lost++; continue; }
       if (avail.length < members.length) { lost += members.length; continue; }
-      members.forEach((c, i) => { pick.set(c, avail[i]); used.add(avail[i]); if (avail.length > 1) ordered++; else unique++; });
+      let order = members, prods = avail.slice(0, members.length);
+      // Recent sets: Cardmarket sometimes creates the secret or full-art version weeks before the set (Weavile CEC 238 before
+      // Weavile CEC 44), so number order would give the common the secret's product. When a common, uncommon or rare card
+      // would end up priced over five times its secret, illustration or ultra rare twin, pair them by rarity and price instead.
+      if (members.length > 1 && members.every(c => /^(sm|swsh|sv|me)/.test(c.set))) {
+        const pr = id => avg(id), base = new Map(members.map((c, i) => [c, prods[i]]));
+        const flip = prods.every(id => pr(id) != null) && members.some(x => members.some(y => rank(x.rar) <= 3 && rank(y.rar) >= 5 && pr(base.get(x)) > 5 * pr(base.get(y))));
+        if (flip) { order = members.slice().sort((a, b) => rank(a.rar) - rank(b.rar) || a.setOrder - b.setOrder || byLid(a, b)); prods = prods.slice().sort((a, b) => pr(a) - pr(b) || a - b); flipped++; }
+      }
+      order.forEach((c, i) => { pick.set(c, prods[i]); used.add(prods[i]); if (avail.length > 1) ordered++; else unique++; });
     }
   }
   // what the app needs: only French cards whose product changes, or whose TCGdex product is certainly another card
@@ -103,6 +116,20 @@ function checkCardmarket(all, dir) {
     const p = P.get(c.main);
     if (!p || score(c, p) < 0) { fixes.set(c.set + '-' + c.lid, { id: 0, price: 0 }); dropped++; }   // wrong card and no sure replacement: search by name
   }
-  return { fixes, report: `Cardmarket : ${todo.length} produits TCGdex douteux, ${changed} corrigés (${unique} sûrs, ${ordered} dans l'ordre des numéros), ${kept} confirmés, ${dropped} remplacés par une recherche, ${lost} laissés tels quels` };
+  // TCGdex sometimes swaps the plain card and a stamped version (Fuecoco SSP 029 pointed to its "Horizons" stamp).
+  // Stamped versions are added to Cardmarket after the set and sell for more, so a plain card whose product is newer
+  // and much dearer than its stamped version, with the same name in the same expansion, gets the stamped one's product.
+  let swapped = 0;
+  for (const c of all) {
+    if (!c.fr || !c.stamped || !c.stamped.length) continue;
+    const key = c.set + '-' + c.lid, f = fixes.get(key), cur = f ? f.id : (pick.get(c) ?? c.main), p = P.get(cur);
+    if (!p) continue;
+    for (const sid of c.stamped) {
+      const q = P.get(sid), a = avg(cur), b = avg(sid);
+      if (!q || sid >= cur || q.exp !== p.exp || q.name !== p.name || a == null || b == null || b * 3 > a) continue;
+      fixes.set(key, { id: sid, price: priceOf(sid) }); swapped++; break;
+    }
+  }
+  return { fixes, report: `Cardmarket : ${todo.length} produits TCGdex douteux, ${changed} corrigés (${unique} sûrs, ${ordered} dans l'ordre des numéros dont ${flipped} groupes selon la rareté), ${kept} confirmés, ${dropped} remplacés par une recherche, ${lost} laissés tels quels, ${swapped} versions tamponnées inversées` };
 }
 module.exports = { checkCardmarket };
