@@ -245,13 +245,15 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
 .cam-msg .btn{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3)}.cam-msg .btn.primary{background:#FFD646;color:#1a1400;border-color:#FFD646}
 /* binders */
 .sc-master{grid-column:1/-1;align-items:flex-start;font-size:13.5px;line-height:1.4}.sc-master input{margin-top:3px}
-.btools{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto}
+.btools{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) auto}
+.bquick{margin:2px 0 10px;font-size:13.5px;align-items:flex-start}.bquick input{margin-top:3px}
 @media (max-width:760px){.btools{grid-template-columns:1fr 1fr}}
 .bsum{display:grid;gap:6px;margin:4px 0 10px;font-size:14px;color:var(--ink-2)}.bsum b{color:var(--ink)}
 .warn-t{color:var(--danger)}
 .bvars{margin:0 0 12px;font-size:13.5px}.bvars summary{cursor:pointer;color:var(--ink-2);font-weight:600}.bvars .chips{margin-top:8px;gap:6px 16px}
 .bnav{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .bpages{display:grid;gap:20px;max-width:1080px;margin-inline:auto}
+.bpages:not(.spread){max-width:560px}
 .bcover{display:grid;place-items:center;color:var(--ink-3);font-size:13px}.bpages.spread{grid-template-columns:1fr 1fr;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
 .bpage{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px;display:grid;gap:8px;min-width:0}
 .bpages.spread .bpage{border:0;border-radius:0;background:none}.bpages.spread .bpage:first-child{border-right:2px solid var(--line)}
@@ -262,12 +264,17 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
 .bslot .pocket{position:absolute;inset:0}
 .bslot:not(.own) .pocket{filter:grayscale(1);opacity:.35}
 .bslot.own .pocket{box-shadow:0 0 0 2px var(--gold),var(--shadow)}
+.bbonus{position:absolute;right:4px;top:4px;z-index:2;font:700 9.5px/1 var(--body);padding:3px 5px;border-radius:5px;background:var(--gold);color:var(--gold-ink);text-transform:uppercase;letter-spacing:.04em}
+.bonus-page .bpage-h span:first-child{color:var(--gold)}
+.bslot.empty.lead{border-style:solid}
+.bslot.empty .bk{position:absolute;right:4px;bottom:4px}
 .btag{position:absolute;left:4px;top:4px;z-index:2;font:700 10px/1 var(--body);padding:3px 5px;border-radius:5px;background:var(--accent);color:var(--accent-ink)}
 .btag.plain{background:rgba(0,0,0,.55);color:#fff}
 .bnum{position:absolute;left:4px;bottom:4px;z-index:2;font:500 10px/1 var(--mono);padding:2px 4px;border-radius:4px;background:rgba(0,0,0,.6);color:#fff}
 .bk{position:absolute;right:4px;bottom:4px;z-index:2;font:600 10px/1 var(--mono);color:var(--ink-3)}
 .bslot.own .bk{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.7)}
-.mplist{display:grid;gap:3px}.mp{display:flex;gap:8px;justify-content:space-between;align-items:baseline;font-size:13px}
+.mplist{display:grid;gap:3px}.mp-b{font-style:normal;font-size:11px;font-weight:700;color:var(--gold-ink);background:var(--gold);border-radius:4px;padding:0 4px}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font-size:11.5px;cursor:pointer;text-decoration:underline}.mp{display:flex;gap:8px;justify-content:space-between;align-items:baseline;font-size:13px}
 .mp-s{font-size:11px;font-weight:700;padding:1px 6px;border-radius:5px;background:var(--surface-2);color:var(--ink-3)}.mp-s.ok{background:var(--ok);color:var(--bg)}.mp-s.own{background:var(--gold);color:var(--gold-ink)}
 .slot-hint{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--accent-soft);border-radius:8px;padding:8px 10px}
 .where{color:#FFD646}
@@ -370,8 +377,10 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
       <div class="field q"><label for="bSet">Série</label><select id="bSet"></select></div>
       <div class="field"><label for="bFormat">Format des pages</label><select id="bFormat"><option value="">Automatique</option><option value="9">9 cases (3×3)</option><option value="12">12 cases (4×3)</option><option value="4">4 cases (2×2)</option></select></div>
       <div class="field"><label for="bFaces">Pages par classeur</label><input type="number" id="bFaces" min="2" max="200" step="2" inputmode="numeric"></div>
+      <div class="field"><label for="bLead">Cases vides au début</label><input type="number" id="bLead" min="0" max="200" step="1" inputmode="numeric"></div>
       <div class="field"><span class="lbl">Collection</span><button class="btn" type="button" id="bPlace">Ranger mes cartes ici</button></div>
     </div>
+    <label class="check bquick"><input type="checkbox" id="bQuick"> <span><b>Cocher en un clic</b> : touche une case grise pour ajouter la carte à ta collection à cet emplacement, retouche-la pour l’enlever. Pratique pour reporter un classeur déjà rempli.</span></label>
     <div class="bsum"><div id="bSummary"></div><div class="bar"><i id="bBar"></i></div></div>
     <details class="bvars"><summary>Variantes comptées dans ce master set</summary><div id="bVars" class="chips"></div></details>
     <div id="bBanner"></div>
@@ -458,10 +467,10 @@ let sets = CAT.sets.map((s,i)=>Object.assign(s,{i}));
 let cards = [], byId = new Map(), setById = new Map(sets.map(s=>[s.id,s]));
 function natKey(id){ const m=String(id).match(/^(\D*)(\d+)(.*)$/); return m?[m[1],+m[2],m[3]]:[String(id),0,'']; }
 function cmpId(a,b){ const x=natKey(a),y=natKey(b); return x[0].localeCompare(y[0])||x[1]-y[1]||x[2].localeCompare(y[2]); }
-function addCard(o){ o.hay = norm([o.name,o.en,o.set.name,o.set.en,o.set.code,o.set.oc].filter(Boolean).join(' ')) + ' ' + norm(o.lid+'/'+o.set.total) + ' #' + norm(o.lid); cards.push(o); byId.set(o.id,o); }
+function addCard(o){ if(!o.bonus) o.bonus=[]; o.hay = norm([o.name,o.en,o.set.name,o.set.en,o.set.code,o.set.oc].filter(Boolean).join(' ')) + ' ' + norm(o.lid+'/'+o.set.total) + ' #' + norm(o.lid); cards.push(o); byId.set(o.id,o); }
 for (const c of CAT.cards){
   const s = sets[c[0]];
-  addCard({id:s.id+'-'+c[1], set:s, lid:c[1], name:c[2], en:c[3]||'', rar:CAT.rarities[c[4]], type:c[5], cat:c[6], vars:c[7].split('|'), img:null});
+  addCard({id:s.id+'-'+c[1], set:s, lid:c[1], name:c[2], en:c[3]||'', rar:CAT.rarities[c[4]], type:c[5], cat:c[6], vars:c[7].split('|'), bonus:c[9]?String(c[9]).split('|'):[], img:null});
 }
 const nSetsAtStart = sets.length;
 function fillFilters(){
@@ -533,7 +542,7 @@ function imgUrl(c, lang){ // FR scan (known from TCGdex, or built from the set p
 function pocket(c, size){
   const fr = imgUrl(c,'fr'), en = imgUrl(c,'en');
   const src = fr || en;
-  const ph = `<div class="ph" style="--tc:${tc(c)}"><div class="n">${esc(c.name)}</div><div class="a">${c.type>=0?TYPE_FR[c.type]:CAT_FR[c.cat]}<small style="display:block;font-family:var(--body);font-size:10.5px;letter-spacing:0;text-transform:none;font-weight:500;opacity:.8;margin-top:4px">Scan pas encore disponible</small></div></div>`;
+  const ph = `<div class="ph" style="--tc:${tc(c)}"><div class="n">${esc(c.name)}</div><div class="a">${esc(c.set.code?c.set.code+' '+c.lid:c.lid)}<small style="display:block;font-family:var(--body);font-size:10.5px;letter-spacing:0;text-transform:none;font-weight:500;opacity:.8;margin-top:4px">Scan pas encore publié</small></div></div>`;
   if (!src) return ph;
   return ph + `<img loading="lazy" alt="" src="${esc(src)}/${size}.webp" ${fr?`data-en="${esc(en||'')}"`:'data-last="1"'} data-size="${size}">${fr?'':'<span class="en">image EN</span>'}`;
 }
@@ -712,8 +721,8 @@ function renderSets(){
   for(const s of list){
     if(s.serie!==last){ html+=`<div class="sethead">${esc(s.serie)}</div>`; last=s.serie; }
     const have=counts.get(s.i)||0, pct=s.n?Math.round(have/s.n*100):0;
-    let mf=0; const mp=have?planFor(s):null; if(mp) for(const x of mp.slots) if((varsById.get(x.c.id)||{})[x.v]) mf++;
-    html+=`<button class="setrow" data-set="${s.i}"><div class="h"><b>${esc(s.name)}</b><span class="num">${have}/${s.n}${mp?` · master ${mf}/${mp.slots.length}`:''}</span></div><div class="bar"><i style="width:${pct}%"></i></div><div class="sub"><span>${esc(s.code||s.id)}${s.date?' · '+s.date.slice(0,4):''}</span><span>${pct} %</span></div></button>`;
+    let mf=0; const mp=have?planFor(s):null; if(mp) for(const x of mp.slots) if(!x.empty && (varsById.get(x.c.id)||{})[x.v]) mf++;
+    html+=`<button class="setrow" data-set="${s.i}"><div class="h"><b>${esc(s.name)}</b><span class="num">${have}/${s.n}${mp?` · master ${mf}/${mp.real}`:''}</span></div><div class="bar"><i style="width:${pct}%"></i></div><div class="sub"><span>${esc(s.code||s.id)}${s.date?' · '+s.date.slice(0,4):''}</span><span>${pct} %</span></div></button>`;
   }
   box.innerHTML=html;
 }
@@ -755,7 +764,7 @@ function scanProgress(list){
   const have=list.filter(c=>ownedById.has(c.id)).length;
   const rv=list.filter(c=>c.vars.includes('r')), haveR=rv.filter(c=>(varsById.get(c.id)||{}).r).length;
   $('#scHave').textContent=`${have}/${list.length}`;
-  if (scan.master && list.length){ const plan=planFor(list[0].set); let f=0; for(const s of plan.slots) if((varsById.get(s.c.id)||{})[s.v]) f++; $('#scRev').textContent=`Master set ${f}/${plan.slots.length}`; }
+  if (scan.master && list.length){ const plan=planFor(list[0].set); let f=0; for(const s of plan.slots) if(!s.empty && (varsById.get(s.c.id)||{})[s.v]) f++; $('#scRev').textContent=`Master set ${f}/${plan.real}`; }
   else $('#scRev').textContent = rv.length ? `Reverse ${haveR}/${rv.length}` : '';
   $('#scBar').style.width=(list.length?have/list.length*100:0)+'%';
 }
@@ -1064,15 +1073,21 @@ function masterVars(c, cfg){
   if (cfg.addPatterns && v.includes('r')) for (const p of cfg.addPatterns){ const k='r.'+p; if(!v.includes(k)) v.push(k); }
   return v.sort((a,b)=>vrank(a)-vrank(b));
 }
+function isBonus(c, v, cfg){ const o=cfg.bonus&&cfg.bonus[c.id+'|'+v]; if (o!=null) return o; return c.bonus.includes(v); }
 function binderPlan(set){
-  const cfg=binderCfg[set.id]||{}, list=cards.filter(c=>c.set===set).sort((a,b)=>cmpId(a.lid,b.lid)), slots=[];
-  for (const c of list) for (const v of masterVars(c,cfg)) slots.push({c, v});
-  const faces=Math.max(2, Math.min(200, +cfg.faces||40));
-  const pocket = BINDERS[cfg.pocket] ? +cfg.pocket : (slots.length<=9*faces ? 9 : 12);
-  const {cols, rows}=BINDERS[pocket], cap=pocket*faces, nb=Math.max(1, Math.ceil(slots.length/cap));
-  const index=new Map(slots.map((s,i)=>[s.c.id+'|'+s.v, i]));
+  const cfg=binderCfg[set.id]||{}, list=cards.filter(c=>c.set===set).sort((a,b)=>cmpId(a.lid,b.lid)), main=[], extra=[];
+  for (const c of list) for (const v of masterVars(c,cfg)) (isBonus(c,v,cfg)?extra:main).push({c, v});
+  const lead=Math.max(0, Math.min(200, Math.floor(+cfg.lead||0)));
+  const real=main.length+extra.length, faces=Math.max(2, Math.min(200, +cfg.faces||40));
+  const pocket = BINDERS[cfg.pocket] ? +cfg.pocket : (lead+real<=9*faces ? 9 : 12);
+  const {cols, rows}=BINDERS[pocket], slots=[];
+  for (let k=0;k<lead;k++) slots.push({empty:true, lead:true});
+  for (const s of main) slots.push(s);
+  if (extra.length){ while (slots.length%pocket) slots.push({empty:true}); for (const s of extra) slots.push({...s, bonus:true}); }
+  const cap=pocket*faces, nb=Math.max(1, Math.ceil(slots.length/cap));
+  const index=new Map(); slots.forEach((s,i)=>{ if(!s.empty) index.set(s.c.id+'|'+s.v, i); });
   const allVars=[...new Set(list.flatMap(c=>c.vars))].sort((a,b)=>vrank(a)-vrank(b));
-  return {set, cfg, slots, pocket, cols, rows, faces, cap, nb, index, auto:!BINDERS[cfg.pocket], allVars};
+  return {set, cfg, slots, real, nBonus:extra.length, lead, pocket, cols, rows, faces, cap, nb, index, auto:!BINDERS[cfg.pocket], allVars};
 }
 function planFor(set){ let p=planCache.get(set.id); if(!p){ p=binderPlan(set); planCache.set(set.id,p); } return p; }
 function slotPos(plan, i){ const b=Math.floor(i/plan.cap), j=i%plan.cap, k=j%plan.pocket; return {i, binder:b+1, page:Math.floor(j/plan.pocket)+1, slot:k+1, row:Math.floor(k/plan.cols)+1, col:k%plan.cols+1}; }
@@ -1094,11 +1109,10 @@ function renderBinder(){
   bview.binder=Math.min(Math.max(1,bview.binder),plan.nb); const np=pagesInBinder(bview.binder); bview.page=Math.min(Math.max(1,bview.page),np);
   // progress: a pocket counts as filled when you own that card in that variant
   let filled=0, placed=0;
-  for (const s of plan.slots){ const own=(varsById.get(s.c.id)||{})[s.v]; if(own) filled++; }
-  for (const s of plan.slots){ const w=whereFor(s.c,s.v); if(w && placedIn(w,s.c,s.v)) placed++; }
-  $('#bFormat').value = plan.auto ? '' : String(plan.pocket); $('#bFaces').value = plan.faces;
-  $('#bSummary').innerHTML = `<b class="num">${filled}/${plan.slots.length}</b> emplacements remplis · ${plan.pocket} cases (${plan.cols}×${plan.rows})${plan.auto?' choisies automatiquement':''} · ${Math.ceil(plan.slots.length/plan.pocket)} pages${plan.nb>1?` · <b>${plan.nb} classeurs</b> de ${plan.faces} pages`:''}${placed<filled?` · <span class="warn-t">${filled-placed} carte${filled-placed>1?'s':''} pas encore rangée${filled-placed>1?'s':''} ici</span>`:''}`;
-  $('#bBar').style.width=(plan.slots.length?filled/plan.slots.length*100:0)+'%';
+  for (const s of plan.slots){ if(s.empty) continue; const own=(varsById.get(s.c.id)||{})[s.v]; if(own){ filled++; if(placedIn(whereFor(s.c,s.v),s.c,s.v)) placed++; } }
+  $('#bFormat').value = plan.auto ? '' : String(plan.pocket); $('#bFaces').value = plan.faces; $('#bLead').value = plan.lead; $('#bQuick').checked = !!bview.quick;
+  $('#bSummary').innerHTML = `<b class="num">${filled}/${plan.real}</b> emplacements remplis${plan.nBonus?` (dont ${plan.nBonus} bonus en fin de classeur)`:''} · ${plan.pocket} cases (${plan.cols}×${plan.rows})${plan.auto?' choisies automatiquement':''} · ${Math.ceil(plan.slots.length/plan.pocket)} pages${plan.nb>1?` · <b>${plan.nb} classeurs</b> de ${plan.faces} pages`:''}${placed<filled?` · <span class="warn-t">${filled-placed} carte${filled-placed>1?'s':''} pas encore rangée${filled-placed>1?'s':''} ici</span>`:''}`;
+  $('#bBar').style.width=(plan.real?filled/plan.real*100:0)+'%';
   $('#bVars').innerHTML = plan.allVars.map(v=>`<label class="check"><input type="checkbox" data-bvar="${esc(v)}" ${(cfg.exclude||[]).includes(v)?'':'checked'}> ${esc(vn(v))}</label>`).join('')
     + (plan.allVars.includes('r') ? ['pokeball','masterball'].filter(p=>!plan.allVars.includes('r.'+p)).map(p=>`<label class="check" title="Si la base de cartes ne les connaît pas encore pour cette série"><input type="checkbox" data-badd="${p}" ${(cfg.addPatterns||[]).includes(p)?'checked':''}> + Reverse ${PAT_FR[p]} à chaque reverse</label>`).join('') : '');
   $('#bBinders').innerHTML = plan.nb>1 ? Array.from({length:plan.nb},(_,k)=>`<button class="chip" type="button" data-bbinder="${k+1}" aria-pressed="${bview.binder===k+1}">Classeur ${k+1}</button>`).join('') : '';
@@ -1106,26 +1120,29 @@ function renderBinder(){
   $('#bPrev').disabled = bview.page<=1; $('#bNext').disabled = bview.page>=np;
   // an open binder shows two facing pages (verso of one sheet, recto of the next): page 1 alone, then 2-3, 4-5...
   const wide = matchMedia('(min-width: 900px)').matches, pages=[];
-  if (wide){ const p=bview.page; if (p===1) pages.push(0,1); else { const left=p%2===0?p:p-1; pages.push(left); if(left+1<=np) pages.push(left+1); } } else pages.push(bview.page);
+  if (wide){ const p=bview.page; if (p===1) pages.push(0,1); else { const left=p%2===0?p:p-1; pages.push(left, left+1<=np?left+1:-1); } } else pages.push(bview.page);
   $('#bPages').innerHTML = pages.map(p=>binderPage(plan, bview.binder, p)).join('');
   $('#bPages').className = 'bpages'+(pages.length>1?' spread':'');
 }
 function binderPage(plan, b, p){
   if (p===0) return '<div class="bpage bcover"><span>Intérieur de la couverture</span></div>';
+  if (p<0) return '<div class="bpage bcover"><span>Fin du classeur</span></div>';
   const start=(b-1)*plan.cap+(p-1)*plan.pocket, cells=[];
   for (let k=0;k<plan.pocket;k++){
     const i=start+k, s=plan.slots[i];
-    if (!s){ cells.push('<div class="bslot empty"></div>'); continue; }
+    if (!s || s.empty){ cells.push(`<div class="bslot empty${s&&s.lead?' lead':''}"><span class="bk">${k+1}</span></div>`); continue; }
     const own=(varsById.get(s.c.id)||{})[s.v]||0;
-    cells.push(`<button type="button" class="bslot${own?' own':''}" data-id="${esc(s.c.id)}" data-v="${esc(s.v)}" title="${esc(s.c.name)} · ${esc(s.c.lid)} · ${esc(vn(s.v))}${own?'':' (manquante)'}">
-      <div class="pocket">${pocket(s.c,'low')}</div><span class="btag${s.v==='n'||s.v==='h'?' plain':''}">${esc(vshort(s.v))}</span><span class="bnum">${esc(s.c.lid)}</span><span class="bk">${k+1}</span></button>`);
+    cells.push(`<button type="button" class="bslot${own?' own':''}${s.bonus?' bonus':''}" data-id="${esc(s.c.id)}" data-v="${esc(s.v)}" title="${esc(s.c.name)} · ${esc(s.c.lid)} · ${esc(vn(s.v))}${own?'':' (manquante)'}">
+      <div class="pocket">${pocket(s.c,'low')}</div><span class="btag${s.v==='n'||s.v==='h'?' plain':''}">${esc(vshort(s.v))}</span>${s.bonus?'<span class="bbonus">Bonus</span>':''}<span class="bnum">${esc(s.c.lid)}</span><span class="bk">${k+1}</span></button>`);
   }
-  return `<div class="bpage"><div class="bpage-h"><span>Page ${p}</span><span class="note">${p%2?'recto':'verso'}</span></div><div class="bgrid" style="grid-template-columns:repeat(${plan.cols},minmax(0,1fr))">${cells.join('')}</div></div>`;
+  const hasBonus=plan.slots.slice(start,start+plan.pocket).some(s=>s&&s.bonus);
+  return `<div class="bpage${hasBonus?' bonus-page':''}"><div class="bpage-h"><span>Page ${p}${hasBonus?' · Bonus (hors boosters)':''}</span><span class="note">${p%2?'recto':'verso'}</span></div><div class="bgrid" style="grid-template-columns:repeat(${plan.cols},minmax(0,1fr))">${cells.join('')}</div></div>`;
 }
 // give a binder place to cards already in the collection (one copy per pocket, the others stay where they are)
 function planPlacement(plan){
   const moves=[];
   for (const s of plan.slots){
+    if (s.empty) continue;
     const w=whereFor(s.c,s.v); if(!w || placedIn(w,s.c,s.v)) continue;
     const src=[...entries].filter(([,e])=>e.card===s.c.id && e.variant===s.v && !/^Classeur /.test(e.box||'')).sort((a,b)=>(a[1].added||0)-(b[1].added||0))[0];
     if (src) moves.push({id:src[0], e:src[1], w});
@@ -1143,17 +1160,39 @@ function applyPlacement(moves){
 $('#bSet').onchange=()=>{ bview.set=sets[+$('#bSet').value].id; bview.page=1; bview.binder=1; $('#bBanner').innerHTML=''; renderBinder(); };
 $('#bPrev').onclick=()=>{ const wide=matchMedia('(min-width: 900px)').matches; bview.page = wide ? (bview.page<=3?1:(bview.page%2===0?bview.page-2:bview.page-3)) : bview.page-1; renderBinder(); };
 $('#bNext').onclick=()=>{ const wide=matchMedia('(min-width: 900px)').matches; bview.page = wide ? (bview.page===1?2:(bview.page%2===0?bview.page+2:bview.page+1)) : bview.page+1; renderBinder(); };
-$('#bFormat').onchange=()=>{ const set=setById.get(bview.set), c=binderCfg[set.id]={...(binderCfg[set.id]||{})}; if($('#bFormat').value) c.pocket=+$('#bFormat').value; else delete c.pocket; saveBinderCfg(); renderBinder(); };
-$('#bFaces').onchange=()=>{ const set=setById.get(bview.set), c=binderCfg[set.id]={...(binderCfg[set.id]||{})}; c.faces=Math.max(2,Math.min(200,+$('#bFaces').value||40)); saveBinderCfg(); renderBinder(); };
+$('#bFormat').onchange=()=>{ const set=setById.get(bview.set), c=binderCfg[set.id]={...(binderCfg[set.id]||{})}; if($('#bFormat').value) c.pocket=+$('#bFormat').value; else delete c.pocket; saveBinderCfg(); renderBinder(); warnMoved(set); };
+$('#bFaces').onchange=()=>{ const set=setById.get(bview.set), nv=Math.max(2,Math.min(200,+$('#bFaces').value||40)); if(nv===(+((binderCfg[set.id]||{}).faces)||40)) return; const c=binderCfg[set.id]={...(binderCfg[set.id]||{})}; c.faces=nv; saveBinderCfg(); renderBinder(); warnMoved(set); };
+$('#bLead').onchange=()=>{ const set=setById.get(bview.set), nv=Math.max(0,Math.min(200,Math.floor(+$('#bLead').value||0))); if(nv===(+((binderCfg[set.id]||{}).lead)||0)) return; const c=binderCfg[set.id]={...(binderCfg[set.id]||{})}; c.lead=nv; saveBinderCfg(); renderBinder(); warnMoved(set); };
+$('#bQuick').onchange=()=>{ bview.quick=$('#bQuick').checked; LS.set('classeur-fr-bquick', bview.quick); };
+// cards already placed keep their old page/case when the layout changes: offer to move them
+function warnMoved(set){
+  const plan=planFor(set); let n=0;
+  for (const e of entries.values()){ const c=byId.get(e.card); if(!c||c.set!==set||!/^Classeur /.test(e.box||'')) continue; const w=whereFor(c,e.variant); if(w && (w.box!==e.box || w.spot!==e.spot) && !placedIn(w,c,e.variant)) n++; }
+  const bn=$('#bBanner'); if(!n){ bn.innerHTML=''; return; }
+  bn.innerHTML=`<div class="banner"><span>${n} carte${n>1?'s':''} déjà rangée${n>1?'s':''} change${n>1?'nt':''} de case avec cette mise en page.</span><span class="chips"><button class="btn small primary" type="button" id="bMove">Mettre à jour leurs emplacements</button></span></div>`;
+  $('#bMove').onclick=()=>{ for (const [id,e] of entries){ const c=byId.get(e.card); if(!c||c.set!==set||!/^Classeur /.test(e.box||'')) continue; const w=whereFor(c,e.variant); if(w && !placedIn(w,c,e.variant)) entries.set(id,{...e, box:w.box, spot:w.spot}); }
+    saveEntries(); recompute(); bn.innerHTML='<div class="banner"><span>Emplacements mis à jour.</span></div>'; };
+}
+function quickToggle(c, v){
+  const w=whereFor(c,v); if(!w) return;
+  const here=[...entries].find(([,e])=>e.card===c.id && e.variant===v && e.box===w.box && e.spot===w.spot);
+  let msg;
+  if (here){ const [id,e]=here; undo.push({id, before:{...e}, card:c.id}); if((+e.qty||0)>1) entries.set(id,{...e, qty:e.qty-1}); else entries.delete(id); msg=`Retirée : ${c.name} ${c.lid} · ${vn(v)}`; }
+  else { const id=newId(); undo.push({id, before:null, card:c.id}); entries.set(id,{card:c.id, variant:v, cond:scan.cond||'NM', qty:1, price:null, box:w.box, spot:w.spot, added:Date.now()}); msg=`Ajoutée : ${c.name} ${c.lid} · ${vn(v)} · page ${w.pos.page}, case ${w.pos.slot}`; }
+  saveEntries(); recompute(); queuePrice(c.id); toastUndo(msg);
+}
+function toastUndo(msg){ const t=$('#toast'); t.innerHTML=`${esc(msg)} <button class="btn small" type="button" id="tUndo" style="margin-left:8px">Annuler</button>`; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,4000);
+  $('#tUndo').onclick=()=>{ scanUndo(); recompute(); t.hidden=true; }; }
+bview.quick = LS.get('classeur-fr-bquick', false);
 $('#bVars').addEventListener('change', e=>{
   const set=setById.get(bview.set), c=binderCfg[set.id]={...(binderCfg[set.id]||{})};
   const v=e.target.dataset.bvar, p=e.target.dataset.badd;
   if (v){ const ex=new Set(c.exclude||[]); if(e.target.checked) ex.delete(v); else ex.add(v); c.exclude=[...ex]; }
   if (p){ const ad=new Set(c.addPatterns||[]); if(e.target.checked) ad.add(p); else ad.delete(p); c.addPatterns=[...ad]; }
-  saveBinderCfg(); renderBinder();
+  saveBinderCfg(); renderBinder(); warnMoved(set);
 });
 $('#bBinders').addEventListener('click', e=>{ const b=e.target.closest('[data-bbinder]'); if(!b) return; bview.binder=+b.dataset.bbinder; bview.page=1; renderBinder(); });
-$('#bPages').addEventListener('click', e=>{ const s=e.target.closest('.bslot[data-id]'); if(s) openSheet(s.dataset.id, null, s.dataset.v); });
+$('#bPages').addEventListener('click', e=>{ const s=e.target.closest('.bslot[data-id]'); if(!s) return; const c=byId.get(s.dataset.id); if(bview.quick && c) quickToggle(c, s.dataset.v); else openSheet(s.dataset.id, null, s.dataset.v); });
 $('#bPlace').onclick=()=>{
   const plan=planFor(setById.get(bview.set)), moves=planPlacement(plan), bn=$('#bBanner');
   if (!moves.length){ bn.innerHTML='<div class="banner"><span>Toutes tes cartes de cette série ont déjà leur place dans le classeur.</span></div>'; return; }
@@ -1196,7 +1235,8 @@ function openSheet(id, entryId, preVar){
 function masterPlaces(c){
   const plan=planFor(c.set), vs=masterVars(c, plan.cfg); if(!vs.length) return '';
   const rows=vs.map(v=>{ const w=whereFor(c,v); if(!w) return ''; const own=(varsById.get(c.id)||{})[v], ok=own&&placedIn(w,c,v);
-    return `<div class="mp"><span>${esc(vn(v))}</span><span class="num">p. ${w.pos.page} · case ${w.pos.slot}${plan.nb>1?' · classeur '+w.pos.binder:''}</span><span class="mp-s ${ok?'ok':own?'own':''}">${ok?'rangée':own?'à ranger':'manquante'}</span></div>`; }).join('');
+    const b=isBonus(c,v,plan.cfg);
+    return `<div class="mp"><span>${esc(vn(v))}${b?' <em class="mp-b">bonus</em>':''} <button class="linkbtn" type="button" data-act="tglbonus" data-v="${esc(v)}">${b?'remettre dans le set':'mettre en bonus'}</button></span><span class="num">p. ${w.pos.page} · case ${w.pos.slot}${plan.nb>1?' · classeur '+w.pos.binder:''}</span><span class="mp-s ${ok?'ok':own?'own':''}">${ok?'rangée':own?'à ranger':'manquante'}</span></div>`; }).join('');
   return `<dt>Classeur</dt><dd class="mplist">${rows}</dd>`;
 }
 function slotHint(c){
@@ -1267,6 +1307,7 @@ $('#shBody').addEventListener('click', e=>{
   if(a.dataset.act==='askdel'){ keepForm(); confirmDel=id; renderSheet(); }
   if(a.dataset.act==='nodel'){ keepForm(); confirmDel=null; renderSheet(); }
   if(a.dataset.act==='cancel'){ openSheet(openId); }
+  if(a.dataset.act==='tglbonus'){ const c=byId.get(openId), v=a.dataset.v, cfg=binderCfg[c.set.id]={...(binderCfg[c.set.id]||{})}; cfg.bonus={...(cfg.bonus||{})}; cfg.bonus[c.id+'|'+v]=!isBonus(c,v,planFor(c.set).cfg); saveBinderCfg(); keepForm(); renderSheet(); if(state.view==='bind') renderBinder(); warnMoved(c.set); return; }
   if(a.dataset.act==='useslot'){ keepForm(); const w=whereFor(byId.get(openId), form.variant); if(w){ form.box=w.box; form.spot=w.spot; renderSheet(); } }
   if(a.dataset.act==='del'){ entries.delete(id); saveEntries(); confirmDel=null; if(editing===id) editing=null; toast('Carte retirée du classeur'); recompute(); }
 });

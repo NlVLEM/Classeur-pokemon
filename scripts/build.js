@@ -47,6 +47,19 @@ function variantsOf(c) {
   if (!out.length) out.push(/Holo/.test(c.rarity || '') ? 'h' : 'n');
   return out.join('|');
 }
+// variants sold outside boosters (blister, deck or tin versions): they go at the end of a master-set binder as bonus cards.
+// When a card exists both in normal and holo, the booster versions share one Cardmarket product; the other one is the bonus.
+function bonusOf(c, serieId) {
+  const v = c.variants; if (!Array.isArray(v) || serieId === 'mc') return '';
+  const plain = v.filter(x => !x.foil && !x.subtype && !(x.stamp && [].concat(x.stamp).length) && (!x.size || x.size === 'standard'));
+  const pid = t => { const x = plain.find(y => y.type === t); return x && x.thirdParty && x.thirdParty.cardmarket; };
+  if (!plain.some(x => x.type === 'normal') || !plain.some(x => x.type === 'holo')) return '';
+  const rev = pid('reverse'), n = pid('normal'), h = pid('holo');
+  if (rev && n && h && n !== h){ if (n !== rev && h === rev) return 'n'; if (h !== rev && n === rev) return 'h'; }
+  const r = c.rarity || '';
+  if (serieId === 'sv' || serieId === 'me') return /^(Common|Uncommon)$/.test(r) ? 'h' : 'n';
+  return /Holo/i.test(r) ? 'n' : 'h';
+}
 const base = path.join(ROOT, 'data'); let skipped = 0;
 for (const serieName of fs.readdirSync(base).sort()) {
   const sDir = path.join(base, serieName);
@@ -64,7 +77,7 @@ for (const serieName of fs.readdirSync(base).sort()) {
       if (!c || !c.name || !c.name.fr) continue;
       const t = (c.types && c.types[0]) ? TYPES.indexOf(c.types[0]) : -1;
       const cat = c.category === 'Trainer' ? 't' : c.category === 'Energy' ? 'e' : 'p';
-      cards.push([si, f.replace(/\.ts$/, ''), c.name.fr, (c.name.en && c.name.en !== c.name.fr) ? c.name.en : 0, R(c.rarity), t, cat, variantsOf(c), (c.dexId && c.dexId[0]) || 0]);
+      cards.push([si, f.replace(/\.ts$/, ''), c.name.fr, (c.name.en && c.name.en !== c.name.fr) ? c.name.en : 0, R(c.rarity), t, cat, variantsOf(c), (c.dexId && c.dexId[0]) || 0, bonusOf(c, serie.id) || 0]);
       count++;
     }
     if (!count) continue;
