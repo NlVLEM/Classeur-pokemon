@@ -237,7 +237,7 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
 .cam-card .thumb{width:42px;flex:none}
 .cam-card .txt{display:grid;min-width:0;font-size:13px;flex:1}
 .cam-card .txt b{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cam-card .acts{display:flex;gap:6px;flex:none}
+.cam-card .acts{display:flex;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end;max-width:55%}
 .cam-card .btn{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.3)}
 .cam-card .btn.primary{background:#FFD646;color:#1a1400;border-color:#FFD646}
 .cam-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 32px));background:#15182b;border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:18px;text-align:center;display:grid;gap:10px}
@@ -1016,13 +1016,13 @@ function handleCard(d){
   cam.hist=[]; cam.block={key:d.key, t:Date.now()}; cam.emptyN=0;
   const c=pickEdition(d);
   if (!c){ cam.pending={editions:d.editions}; showChoice(d.editions); camStatus('Même dessin dans plusieurs séries : laquelle ?','ok'); return; }
-  const have=ownedById.get(c.id)||0;
-  if (have && cam.warnDup){ cam.pending={c}; showDup(c); camStatus('Déjà dans ta collection','warn'); try{ if(navigator.vibrate) navigator.vibrate([40,60,40]); }catch(e){} return; }
+  if (ownedVar(c, resolveVariant(c, scan.variant)) && cam.warnDup){ cam.pending={c}; showDup(c); camStatus('Déjà dans ta collection','warn'); try{ if(navigator.vibrate) navigator.vibrate([40,60,40]); }catch(e){} return; }
   if (cam.auto) camAdd(c); else { cam.pending={c}; showConfirm(c); camStatus('Carte reconnue','ok'); }
 }
-function camAdd(c){
+function ownedVar(c, v){ return (varsById.get(c.id)||{})[v]||0; }
+function camAdd(c, v){
   if (c.set!==scanSet()){ scan.set=c.set.id; saveScan(); }
-  const res=scanAdd(c); cam.pending=null; cam.session.set(c.set.id,(cam.session.get(c.set.id)||0)+1); cam.lastRes=res;
+  const res=scanAdd(c, v); cam.pending=null; cam.session.set(c.set.id,(cam.session.get(c.set.id)||0)+1); cam.lastRes=res;
   if (!cam.block || cam.block.key!==normName(c.name)) cam.block={key:normName(c.name), t:Date.now()};
   showAdded(c, res); camStatus(res&&res.where?`Range-la page ${res.where.pos.page}, case ${res.where.pos.slot}`:'Ajoutée ! Retire la carte et passe à la suivante', 'ok');
   try{ if (navigator.vibrate) navigator.vibrate(60); }catch(e){}
@@ -1030,12 +1030,15 @@ function camAdd(c){
 function cardLine(c, extra, acts){
   return `<div class="cam-card"><div class="thumb" style="--tc:${tc(c)}">${thumbImg(c)}</div><div class="txt"><b>${esc(c.name)}</b><span>${esc(c.set.name)} · ${esc(refOf(c))}</span>${extra?`<span>${extra}</span>`:''}</div><div class="acts">${acts}</div></div>`;
 }
-function showAdded(c, res){ cam.shown=c; const q=ownedById.get(c.id)||0; const place = res&&res.where ? `<b class="where">${esc(res.where.box)} · page ${res.where.pos.page} · case ${res.where.pos.slot}</b> (ligne ${res.where.pos.row}, col. ${res.where.pos.col})` : res&&res.dbl ? `Case déjà remplie : ce double va dans « ${esc(res.box)} »` : '';
+function showAdded(c, res){ cam.shown=c; const q=res&&res.v?ownedVar(c,res.v):(ownedById.get(c.id)||0); const place = res&&res.where ? `<b class="where">${esc(res.where.box)} · page ${res.where.pos.page} · case ${res.where.pos.slot}</b> (ligne ${res.where.pos.row}, col. ${res.where.pos.col})` : res&&res.dbl ? `Case déjà remplie : ce double va dans « ${esc(res.box)} »` : '';
   $('#camResult').innerHTML=cardLine(c, `${esc(vn(res?res.v:resolveVariant(c,scan.variant)))} · ${q} en tout${place?'<br>'+place:''}`, '<button class="btn small" type="button" data-camplus aria-label="Ajouter un autre exemplaire">+1</button><button class="btn small" type="button" data-camundo>Annuler</button>'); }
 function showConfirm(c){ $('#camResult').innerHTML=cardLine(c, 'À confirmer', '<button class="btn small primary" type="button" data-camok>Ajouter</button><button class="btn small" type="button" data-camno>Pas ça</button>'); }
 function showDup(c){
-  const mine=[...entries.values()].filter(e=>e.card===c.id), q=mine.reduce((n,e)=>n+(+e.qty||0),0), where=[...new Set(mine.map(locLabel).filter(Boolean))].join(', ');
-  $('#camResult').innerHTML=cardLine(c, `Tu l’as déjà : ×${q}${where?' · '+esc(where):''}`, '<button class="btn small" type="button" data-camok>Ajouter quand même</button><button class="btn small primary" type="button" data-camno>Pas besoin</button>');
+  const v=resolveVariant(c, scan.variant), mine=[...entries.values()].filter(e=>e.card===c.id && e.variant===v), q=mine.reduce((n,e)=>n+(+e.qty||0),0), where=[...new Set(mine.map(locLabel).filter(Boolean))].join(', ');
+  // the card in hand may simply be a variant you do not have yet (scan set to Normale while holding a reverse)
+  const missing=[...c.vars].sort((a,b)=>vrank(a)-vrank(b)).filter(x=>x!==v && !ownedVar(c,x)).slice(0,3);
+  $('#camResult').innerHTML=cardLine(c, `Tu l’as déjà en ${esc(vn(v))} : ×${q}${where?' · '+esc(where):''}${missing.length?`<br>Il te manque : ${missing.map(x=>esc(vn(x))).join(', ')}`:''}`,
+    missing.map(x=>`<button class="btn small primary" type="button" data-camvar="${esc(x)}">C’est une ${esc(vn(x))}</button>`).join('')+'<button class="btn small" type="button" data-camok>Double en '+esc(vn(v))+'</button><button class="btn small'+(missing.length?'':' primary')+'" type="button" data-camno>Pas besoin</button>');
 }
 function showChoice(eds){
   $('#camResult').innerHTML=`<div class="cam-card cam-choice"><div class="txt"><b>${esc(eds[0].name)}</b><span>Ce dessin existe dans plusieurs séries. Laquelle as-tu ? (code en bas à gauche de la carte)</span><div class="chips">${eds.slice(0,5).map(e=>`<button class="btn small" type="button" data-camed="${esc(e.id)}">${esc(refOf(e))}</button>`).join('')}</div></div><div class="acts"><button class="btn small" type="button" data-camno>Aucune</button></div></div>`;
@@ -1043,9 +1046,10 @@ function showChoice(eds){
 $('#cam').addEventListener('click', e=>{
   if (e.target.closest('[data-camclose]')) return closeCam();
   const ed=e.target.closest('[data-camed]');
-  if (ed){ const c=byId.get(ed.dataset.camed); cam.session.set(c.set.id,(cam.session.get(c.set.id)||0)+1); if ((ownedById.get(c.id)||0) && cam.warnDup){ cam.pending={c}; showDup(c); camStatus('Déjà dans ta collection','warn'); } else camAdd(c); return; }
+  if (ed){ const c=byId.get(ed.dataset.camed); cam.session.set(c.set.id,(cam.session.get(c.set.id)||0)+1); if (ownedVar(c, resolveVariant(c, scan.variant)) && cam.warnDup){ cam.pending={c}; showDup(c); camStatus('Déjà dans ta collection','warn'); } else camAdd(c); return; }
+  const cv=e.target.closest('[data-camvar]'); if (cv && cam.pending && cam.pending.c) return camAdd(cam.pending.c, cv.dataset.camvar);
   if (e.target.closest('[data-camok]') && cam.pending && cam.pending.c) return camAdd(cam.pending.c);
-  if (e.target.closest('[data-camplus]') && cam.shown) return camAdd(cam.shown);
+  if (e.target.closest('[data-camplus]') && cam.shown) return camAdd(cam.shown, cam.lastRes&&cam.lastRes.v);
   if (e.target.closest('[data-camno]')){ cam.pending=null; $('#camResult').innerHTML=''; camStatus('Pas ajoutée. Passe à la carte suivante'); return; }
   if (e.target.closest('[data-camundo]')){ scanUndo(); if(cam.shown) showAdded(cam.shown, null); camStatus('Dernier ajout annulé'); return; }
   const vb=e.target.closest('#camVar button'); if (vb){ scan.variant=vb.dataset.v; saveScan(); fillCamVar(); fillScanControls(); }
@@ -1065,7 +1069,7 @@ $('#camPhoto').onchange=async ev=>{
     let gh=H*0.86, gw=gh*63/88; if (gw>W*0.86){ gw=W*0.86; gh=gw*88/63; }
     const {r,d}=recognise(wkx.getImageData(0,0,W,H), {x:(W-gw)/2, y:(H-gh)/2, w:gw, h:gh});
     if (cam.diag) showDiag(r, d, 0, !!d && d.s>=ACCEPT_S && d.margin>=ACCEPT_M);
-    if (d && d.s>=0.55 && d.margin>=0.12){ const c=pickEdition(d); if(!c){ cam.pending={editions:d.editions}; showChoice(d.editions); } else if((ownedById.get(c.id)||0) && cam.warnDup){ cam.pending={c}; showDup(c); } else { cam.pending={c}; showConfirm(c); } camStatus('Carte reconnue, à confirmer','ok'); }
+    if (d && d.s>=0.55 && d.margin>=0.12){ const c=pickEdition(d); if(!c){ cam.pending={editions:d.editions}; showChoice(d.editions); } else if(ownedVar(c, resolveVariant(c, scan.variant)) && cam.warnDup){ cam.pending={c}; showDup(c); } else { cam.pending={c}; showConfirm(c); } camStatus('Carte reconnue, à confirmer','ok'); }
     else camStatus('Carte pas reconnue : cadre-la en entier, bien à plat, sans reflet','warn');
   }catch(e){ camStatus('Photo illisible','warn'); }
 };
