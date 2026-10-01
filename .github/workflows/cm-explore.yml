@@ -1,0 +1,22 @@
+name: cm-explore (temporaire)
+on:
+  push:
+    branches: [cm-explore]
+permissions:
+  contents: read
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Télécharger le catalogue public Cardmarket
+        run: |
+          mkdir cm
+          for f in productList/products_singles_6.json productList/products_nonsingles_6.json priceGuide/price_guide_6.json; do
+            curl -fsSL "https://downloads.s3.cardmarket.com/productCatalog/$f" -o "cm/$(basename $f)" || echo "fail $f"
+          done
+          ls -la cm; head -c 800 cm/products_singles_6.json; echo; head -c 800 cm/price_guide_6.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cm
+          path: cm
+          retention-days: 1
