@@ -277,6 +277,8 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
 .bnum{position:absolute;left:4px;bottom:4px;z-index:2;font:500 10px/1 var(--mono);padding:2px 4px;border-radius:4px;background:rgba(0,0,0,.6);color:#fff}
 .bk{position:absolute;right:4px;bottom:4px;z-index:2;font:600 10px/1 var(--mono);color:var(--ink-3)}
 .bslot.own .bk{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.systeps{margin:0;padding-left:20px;display:grid;gap:8px;font-size:14px;line-height:1.45}.systeps code{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+#syncinfo.warn{color:var(--danger)}#syncinfo.okc{color:var(--ok)}
 .mplist{display:grid;gap:3px}.mp-b{font-style:normal;font-size:11px;font-weight:700;color:var(--gold-ink);background:var(--gold);border-radius:4px;padding:0 4px}
 .linkbtn{border:0;background:none;padding:0;color:var(--accent);font-size:11.5px;cursor:pointer;text-decoration:underline}.mp{display:flex;gap:8px;justify-content:space-between;align-items:baseline;font-size:13px}
 .mp-s{font-size:11px;font-weight:700;padding:1px 6px;border-radius:5px;background:var(--surface-2);color:var(--ink-3)}.mp-s.ok{background:var(--ok);color:var(--bg)}.mp-s.own{background:var(--gold);color:var(--gold-ink)}
@@ -291,7 +293,7 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
     <div>
       <div class="brand"><div class="ball" aria-hidden="true"></div>
         <div><h1>Mon Classeur Pokémon</h1><p id="catinfo">Chargement du catalogue…</p></div></div>
-      <div class="status"><span id="netinfo">Connexion à TCGdex…</span><span id="priceinfo"></span><span id="backupinfo"></span></div>
+      <div class="status"><span id="netinfo">Connexion à TCGdex…</span><span id="priceinfo"></span><span id="backupinfo"></span><span id="syncinfo"></span></div>
     </div>
     <div class="stats" aria-label="Résumé de la collection">
       <div class="stat"><b id="sTotal">0</b><span>Cartes</span></div>
@@ -313,6 +315,7 @@ input[type=search],input[type=number],input[type=text],select{width:100%;min-wid
       <button class="btn small" id="bkSave">Sauvegarder</button>
       <button class="btn small" id="bkLoad">Restaurer</button>
       <button class="btn small" id="bkCsv">Export tableur</button>
+      <button class="btn small" id="bkSync">Synchro</button>
       <input type="file" id="bkFile" accept="application/json,.json" hidden>
     </div>
   </div>
@@ -462,7 +465,7 @@ let entries = new Map(Object.entries(LS.get(K.entries,{})));
 let prices = LS.get(K.prices,{});           // cardId -> {t, cm}
 let cfg = Object.assign({ref:'avg30', cond:true}, LS.get(K.cfg,{}));
 let storageOk = LS.set('classeur-fr-probe', 1);
-function saveEntries(){ if(!LS.set(K.entries, Object.fromEntries(entries))) toast('Enregistrement impossible : le stockage du navigateur est plein ou bloqué'); }
+function saveEntries(){ stampChanges(); if(!LS.set(K.entries, Object.fromEntries(entries))) toast('Enregistrement impossible : le stockage du navigateur est plein ou bloqué'); }
 function savePrices(){
   const ids = Object.keys(prices);
   if (ids.length > 4000){ // keep owned cards + most recent
@@ -1080,7 +1083,7 @@ function vrank(code){ const [b,p]=String(code).split('.'); const base={'1':0,n:1
 const BINDERS = {4:{cols:2,rows:2}, 9:{cols:3,rows:3}, 12:{cols:4,rows:3}};
 let binderCfg = LS.get('classeur-fr-binders', {});
 const planCache = new Map();
-function saveBinderCfg(){ LS.set('classeur-fr-binders', binderCfg); planCache.clear(); }
+function saveBinderCfg(){ LS.set('classeur-fr-binders', binderCfg); planCache.clear(); bindersAt=Date.now(); LS.set('classeur-fr-binders-at', bindersAt); scheduleSync(); }
 // variants kept in the master set of a card (catalogue variants, minus excluded ones, plus patterns added by hand for incomplete sets)
 function masterVars(c, cfg){
   let v=c.vars.filter(x=>!(cfg.exclude||[]).includes(x));
@@ -1250,6 +1253,141 @@ $('#bPlace').onclick=()=>{
   $('#bNo').onclick=()=>bn.innerHTML='';
 };
 
+/* ---------- cloud sync: the collection lives in a private GitHub repository shared by all your devices ---------- */
+const GH='https://api.github.com', SYNC_FILE='collection.json';
+let sync = Object.assign({repo:'', token:'', last:0, err:''}, LS.get('classeur-fr-sync',{}));
+let tomb = LS.get('classeur-fr-deleted',{});            // id -> time the entry was deleted on this device
+let bindersAt = LS.get('classeur-fr-binders-at',0);
+const strip = e => { const {updated, ...r} = e; return JSON.stringify(r); };
+let snap = new Map([...entries].map(([id,e])=>[id,strip(e)]));
+// every saved change gets a timestamp so two devices can be merged entry by entry (the most recent change wins)
+function stampChanges(){
+  const now=Date.now(); let ch=false;
+  for (const [id,e] of entries){ const s=strip(e); if (snap.get(id)!==s){ entries.set(id,{...e, updated:now}); snap.set(id,s); delete tomb[id]; ch=true; } }
+  for (const id of [...snap.keys()]) if (!entries.has(id)){ snap.delete(id); tomb[id]=now; ch=true; }
+  if (ch){ LS.set('classeur-fr-deleted', tomb); scheduleSync(); }
+}
+function syncOn(){ return !!(sync.repo && sync.token); }
+function saveSync(){ LS.set('classeur-fr-sync', {repo:sync.repo, token:sync.token, last:sync.last, err:sync.err}); }
+let syncT=null, syncing=null, syncAgain=false;
+function scheduleSync(delay){ if(!syncOn()) return; clearTimeout(syncT); syncT=setTimeout(()=>runSync(), delay??4000); }
+const b64e = s => { const u=new TextEncoder().encode(s); let b=''; for (let i=0;i<u.length;i+=0x8000) b+=String.fromCharCode.apply(null, u.subarray(i,i+0x8000)); return btoa(b); };
+const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,'')), c=>c.charCodeAt(0)));
+async function gh(path, opt={}){
+  const r=await fetch(GH+path, {method:opt.method||'GET', cache:'no-store', body:opt.body,
+    headers:{'Authorization':'Bearer '+sync.token, 'Accept':opt.accept||'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28', ...(opt.body?{'Content-Type':'application/json'}:{})}});
+  return r;
+}
+async function pull(){
+  const r=await gh(`/repos/${sync.repo}/contents/${SYNC_FILE}`);
+  if (r.status===404) return {sha:null, data:null};
+  if (!r.ok) throw r;
+  const j=await r.json(); let text;
+  if (j.content && j.encoding==='base64') text=b64d(j.content);
+  else text=await (await gh(`/repos/${sync.repo}/contents/${SYNC_FILE}`, {accept:'application/vnd.github.raw'})).text();   // files over 1 MB
+  return {sha:j.sha, data:JSON.parse(text)};
+}
+function sortedJSON(o){ return JSON.stringify(Object.keys(o||{}).sort().map(k=>[k,o[k]])); }
+function merge(remote){
+  const re=remote&&remote.entries||{}, rd=remote&&remote.deleted||{};
+  const ids=new Set([...entries.keys(), ...Object.keys(re), ...Object.keys(tomb), ...Object.keys(rd)]);
+  let changed=0;
+  for (const id of ids){
+    const l=entries.get(id), r=re[id], lt=l?(l.updated||0):-1, rt=r?(r.updated||0):-1, del=Math.max(tomb[id]||-1, rd[id]||-1);
+    if (del>-1 && del>=Math.max(lt,rt)){ if (l){ entries.delete(id); changed++; } tomb[id]=del; snap.delete(id); }
+    else if (rt>lt){ entries.set(id, r); snap.set(id, strip(r)); delete tomb[id]; changed++; }
+  }
+  // tombstones only need to live long enough to reach every device
+  const old=Date.now()-120*DAY; for (const id of Object.keys(tomb)) if (tomb[id]<old) delete tomb[id];
+  if (remote && remote.binders && (remote.bindersAt||0)>bindersAt){ binderCfg=remote.binders; bindersAt=remote.bindersAt; LS.set('classeur-fr-binders', binderCfg); LS.set('classeur-fr-binders-at', bindersAt); planCache.clear(); changed++; }
+  return changed;
+}
+function payload(){ return {app:'classeur-pokemon', v:2, saved:new Date().toISOString(), entries:Object.fromEntries(entries), deleted:tomb, binders:binderCfg, bindersAt}; }
+function deviceName(){ return /iPhone|iPad|Android/i.test(navigator.userAgent) ? 'téléphone' : 'ordinateur'; }
+async function runSync(){
+  if (!syncOn()) return;
+  if (syncing){ syncAgain=true; return syncing; }
+  syncing=(async()=>{
+    showSync('Synchronisation…');
+    for (let attempt=0; attempt<3; attempt++){
+      const {sha, data}=await pull();
+      const before=sortedJSON(data&&data.entries)+sortedJSON(data&&data.deleted)+(data&&data.bindersAt||0);
+      const n=merge(data);
+      if (n){ LS.set(K.entries, Object.fromEntries(entries)); LS.set('classeur-fr-deleted', tomb); recompute(); }
+      const p=payload(), after=sortedJSON(p.entries)+sortedJSON(p.deleted)+(p.bindersAt||0);
+      if (after===before){ sync.last=Date.now(); sync.err=''; saveSync(); return n; }
+      const r=await gh(`/repos/${sync.repo}/contents/${SYNC_FILE}`, {method:'PUT', body:JSON.stringify({message:`Synchro depuis le ${deviceName()}`, content:b64e(JSON.stringify(p)), ...(sha?{sha}:{})})});
+      if (r.ok){ sync.last=Date.now(); sync.err=''; saveSync(); return n; }
+      if (r.status!==409 && r.status!==422) throw r;     // another device saved in between: merge again
+    }
+    throw new Error('conflict');
+  })().catch(async e=>{
+    const st=e&&e.status;
+    sync.err = st===401 ? 'Jeton refusé ou expiré : recrée-le et reconnecte cet appareil.' : st===403||st===404 ? 'Accès refusé au dépôt : vérifie son nom et les droits du jeton (Contents : lecture et écriture).' : navigator.onLine===false ? 'Hors ligne : la synchro reprendra avec la connexion.' : 'La synchro a échoué, nouvel essai plus tard.';
+    saveSync();
+  }).finally(()=>{ syncing=null; showSync(); renderSyncPanel(); if (syncAgain){ syncAgain=false; scheduleSync(1500); } });
+  return syncing;
+}
+function showSync(busy){
+  const el=$('#syncinfo'); if(!el) return;
+  if (!syncOn()){ el.textContent=''; return; }
+  if (busy){ el.textContent=busy; el.className=''; return; }
+  if (sync.err){ el.textContent='Synchro : '+sync.err; el.className='warn'; return; }
+  el.className='okc'; el.textContent = sync.last ? `Synchronisé à ${new Date(sync.last).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}` : 'Synchro activée';
+}
+/* panel */
+let syncPanelOpen=false;
+function openSyncPanel(){
+  openId=null; syncPanelOpen=true;
+  $('#shName').textContent='Synchronisation'; $('#shSub').textContent='Ta collection sur tous tes appareils';
+  $('#scrim').hidden=false; $('#sheet').hidden=false; renderSyncPanel(); $('#shClose').focus();
+}
+function renderSyncPanel(){
+  if (!syncPanelOpen) return;
+  const on=syncOn();
+  $('#shBody').innerHTML = on ? `
+    <div class="price"><h3>Connecté à ${esc(sync.repo)}</h3>
+      <p class="note">${sync.err?`<span class="warn-t">${esc(sync.err)}</span>`:sync.last?`Dernière synchro : ${new Date(sync.last).toLocaleString('fr-FR')}`:'Pas encore synchronisé'}</p>
+      <p class="note">Chaque modification est envoyée quelques secondes après, et l’app récupère celles de tes autres appareils à chaque ouverture. L’historique des versions reste dans le dépôt GitHub.</p>
+      <div class="chips"><button class="btn small primary" type="button" id="syNow">Synchroniser maintenant</button><button class="btn small danger" type="button" id="syOff">Déconnecter cet appareil</button></div></div>`
+  : `
+    <p class="note" style="font-size:14px;color:var(--ink-2)">Ta collection sera enregistrée dans un dépôt GitHub <b>privé</b> à toi, et chaque appareil connecté au même dépôt aura la même collection.</p>
+    <ol class="systeps">
+      <li><a class="link" href="https://github.com/new" target="_blank" rel="noopener">Crée un dépôt privé ↗</a> nommé par exemple <code>classeur-data</code>, en cochant <b>Private</b>.</li>
+      <li><a class="link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Crée un jeton d’accès ↗</a> : <i>Repository access</i> → <i>Only select repositories</i> → ce dépôt, puis <i>Permissions</i> → <i>Contents</i> → <b>Read and write</b>. Mets la durée la plus longue proposée.</li>
+      <li>Colle le nom du dépôt et le jeton ci-dessous, sur chacun de tes appareils.</li>
+    </ol>
+    <form class="form" id="syForm">
+      <div class="field full"><label for="syRepo">Dépôt privé</label><input type="text" id="syRepo" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="NlVLEM/classeur-data" value="${esc(sync.repo)}"></div>
+      <div class="field full"><label for="syToken">Jeton d’accès</label><input type="password" id="syToken" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…"></div>
+      <p class="note full">Le jeton reste enregistré sur cet appareil uniquement. Ne le partage avec personne.</p>
+      <p class="note full warn-t" id="syErr"></p>
+      <div class="full"><button class="btn primary" type="submit">Connecter et synchroniser</button></div>
+    </form>`;
+  const now=$('#syNow'); if (now) now.onclick=()=>runSync();
+  const off=$('#syOff'); if (off) off.onclick=()=>{ sync={repo:sync.repo, token:'', last:0, err:''}; saveSync(); showSync(); renderSyncPanel(); toast('Cet appareil n’est plus synchronisé. Ta collection reste enregistrée ici.'); };
+  const f=$('#syForm'); if (f) f.onsubmit=async ev=>{
+    ev.preventDefault();
+    const repo=$('#syRepo').value.trim().replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'').replace(/\/+$/,''), token=$('#syToken').value.trim(), err=$('#syErr');
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)){ err.textContent='Indique le dépôt sous la forme pseudo/nom, par exemple NlVLEM/classeur-data.'; return; }
+    if (!token){ err.textContent='Colle le jeton d’accès créé sur GitHub.'; return; }
+    err.textContent='Vérification…';
+    const prev=sync; sync={repo, token, last:0, err:''};
+    try{
+      const r=await gh(`/repos/${repo}`);
+      if (r.status===401){ sync=prev; err.textContent='Jeton refusé : vérifie que tu l’as copié en entier.'; return; }
+      if (!r.ok){ sync=prev; err.textContent='Dépôt introuvable avec ce jeton : vérifie son nom et que le jeton y a accès.'; return; }
+      const j=await r.json();
+      if (!j.private){ sync=prev; err.textContent='Ce dépôt est public : ta collection serait visible par tout le monde. Utilise un dépôt privé.'; return; }
+      if (j.permissions && !j.permissions.push){ sync=prev; err.textContent='Le jeton peut lire le dépôt mais pas écrire : donne-lui Contents → Read and write.'; return; }
+    }catch(e){ sync=prev; err.textContent='Impossible de joindre GitHub : vérifie ta connexion.'; return; }
+    saveSync(); await runSync();
+    toast(sync.err ? 'Connecté, mais la première synchro a échoué' : 'Synchronisé : ta collection est maintenant partagée entre tes appareils');
+  };
+}
+document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState==='visible' && syncOn() && Date.now()-sync.last>30000) runSync(); });
+window.addEventListener('online', ()=>{ if (syncOn()) runSync(); });
+
 /* ---------- Cardmarket links ---------- */
 const CM_COND = {MT:1,NM:2,EX:3,GD:4,LP:5,PL:6,PO:7};
 function cmId(c, variant){ const p=prices[c.id]; if(!p) return null; return (p.vp&&(p.vp[variant]||p.vp[String(variant).split('.')[0]]||p.vp.n)) || (p.cm&&p.cm.idProduct) || null; }
@@ -1293,7 +1431,7 @@ function slotHint(c){
   const here = form.box===w.box && form.spot===w.spot;
   return `<div class="field full slot-hint"><span class="note">Master set : <b>${esc(w.box)} · page ${w.pos.page} · case ${w.pos.slot}</b> (ligne ${w.pos.row}, colonne ${w.pos.col})</span>${here?'':'<button class="btn small" type="button" data-act="useslot">Utiliser cet emplacement</button>'}</div>`;
 }
-function closeSheet(){ openId=null; $('#scrim').hidden=true; $('#sheet').hidden=true; }
+function closeSheet(){ syncPanelOpen=false; openId=null; $('#scrim').hidden=true; $('#sheet').hidden=true; }
 function keepForm(){ const p=$('#price'), b=$('#box'), s=$('#spot'), n=$('#gNote'), ce=$('#gCert'); if(p) form.price=p.value; if(b) form.box=b.value; if(s) form.spot=s.value; if(n) form.note=n.value; if(ce) form.cert=ce.value; }
 function priceBlock(c){
   const p=prices[c.id];
@@ -1372,6 +1510,7 @@ $('#shBody').addEventListener('click', e=>{
   if(a.dataset.act==='del'){ entries.delete(id); saveEntries(); confirmDel=null; if(editing===id) editing=null; toast('Carte retirée du classeur'); recompute(); }
 });
 $('#shBody').addEventListener('submit', e=>{
+  if (e.target.id!=='addForm') return;
   e.preventDefault(); keepForm();
   const c=byId.get(openId), pv=parseFloat(String(form.price).replace(',','.'));
   const data={card:c.id, variant:form.variant, cond:form.cond, qty:form.qty, price:isFinite(pv)&&pv>=0?Math.round(pv*100)/100:null, box:form.box.trim(), spot:form.spot.trim()};
@@ -1419,6 +1558,7 @@ $('#bkFile').onchange=async ev=>{
 };
 function showBackup(){
   const t=LS.get(K.backup,0), el=$('#backupinfo');
+  if (typeof syncOn==='function' && syncOn()){ el.textContent=''; return; }
   if(!storageOk){ el.innerHTML='<span class="warn">Ce navigateur bloque l’enregistrement : pense à sauvegarder avant de fermer.</span>'; return; }
   if(!entries.size){ el.textContent=''; return; }
   const d=t?Math.floor((Date.now()-t)/DAY):null;
@@ -1447,6 +1587,7 @@ $('#scrim').onclick=closeSheet; $('#shClose').onclick=closeSheet;
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(!$('#cam').hidden) return closeCam(); if(openId) closeSheet(); });
 
 fillFilters(); updateCatInfo(); recompute(); showBackup(); showPriceStatus();
+$('#bkSync').onclick=openSyncPanel; showSync(); if (syncOn()) runSync();
 syncLive();
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
