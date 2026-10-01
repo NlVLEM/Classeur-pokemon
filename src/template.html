@@ -447,12 +447,13 @@ const RAR_FR = {'Common':'Commune','Uncommon':'Peu commune','Rare':'Rare','Holo 
 const VAR_FR = {n:'Normale',r:'Reverse',h:'Holo','1':'1ʳᵉ édition',p:'Promo W',l:'Lenticulaire',m:'Métal'};
 const COND = [['MT','Mint',1],['NM','Near Mint',1],['EX','Excellent',.85],['GD','Good',.7],['LP','Light Played',.6],['PL','Played',.45],['PO','Poor',.25]];
 const COEF = Object.fromEntries(COND.map(c=>[c[0],c[2]]));
-const GRADERS = [['PSA','PSA'],['PCA','PCA'],['CGC','CGC'],['BGS','Beckett (BGS)'],['SGC','SGC'],['TAG','TAG'],['Autre','Autre']];
+const GRADERS = [['CCC','CCC'],['PCA','PCA'],['PSA','PSA'],['CGC','CGC'],['BGS','Beckett (BGS)'],['SGC','SGC'],['TAG','TAG'],['Autre','Autre']];
+const LABELS = [['','Standard'],['Gold','Gold Label'],['Black','Black Label']];   // special labels given to some 10s (CCC Gold/Black, BGS Black Label…)
 const GRADES = ['10','9.5','9','8.5','8','7.5','7','6.5','6','5.5','5','4.5','4','3.5','3','2.5','2','1.5','1'];
-function gradeLabel(g){ return g ? `${g.co==='Autre'?'Gradée':g.co} ${String(g.note).replace('.',',')}` : ''; }
+function gradeLabel(g){ return g ? `${g.co==='Autre'?'Gradée':g.co} ${String(g.note).replace('.',',')}${g.label?' '+g.label:''}` : ''; }
 function condLabel(e){ return e.grade ? gradeLabel(e.grade) : e.cond; }
 function certUrl(g){ if(!g||!g.cert) return ''; const n=encodeURIComponent(g.cert.replace(/\s+/g,''));
-  return g.co==='PSA' ? `https://www.psacard.com/cert/${n}/psa` : g.co==='PCA' ? 'https://pcagrade.com/fr/verif' : 'https://cardgrade.io/tools/cert-lookup'; }
+  return g.co==='PSA' ? `https://www.psacard.com/cert/${n}/psa` : g.co==='PCA' ? 'https://pcagrade.com/fr/verif' : g.co==='CCC' ? 'https://cccgrading.com/en/ccc-card-verification' : 'https://cardgrade.io/tools/cert-lookup'; }
 const REF_FR = {avg30:'moyenne 30 j',avg7:'moyenne 7 j',trend:'tendance',low:'plus bas'};
 
 /* ---------- local storage ---------- */
@@ -1413,9 +1414,9 @@ let openId=null, form=null, editing=null, confirmDel=null, priceState='';
 function openSheet(id, entryId, preVar){
   const c=byId.get(id); if(!c) return;
   openId=id; confirmDel=null;
-  if(entryId && entries.has(entryId)){ editing=entryId; const e=entries.get(entryId); form={variant:e.variant,cond:e.cond,qty:+e.qty||1,price:e.price??'',box:e.box||'',spot:e.spot||'',graded:!!e.grade,co:e.grade?e.grade.co:'PSA',note:e.grade?String(e.grade.note):'10',cert:e.grade&&e.grade.cert||''}; }
+  if(entryId && entries.has(entryId)){ editing=entryId; const e=entries.get(entryId); form={variant:e.variant,cond:e.cond,qty:+e.qty||1,price:e.price??'',box:e.box||'',spot:e.spot||'',graded:!!e.grade,co:e.grade?e.grade.co:'CCC',note:e.grade?String(e.grade.note):'10',label:e.grade&&e.grade.label||'',cert:e.grade&&e.grade.cert||''}; }
   else { editing=null; const lastBox=LS.get('classeur-fr-lastbox',''); const v0=preVar&&c.vars.includes(preVar)?preVar:(c.vars.includes('n')?'n':c.vars[0]);
-    form={variant:v0,cond:'NM',qty:1,price:'',box:lastBox,spot:'',graded:false,co:LS.get('classeur-fr-lastgrader','PSA'),note:'10',cert:''};
+    form={variant:v0,cond:'NM',qty:1,price:'',box:lastBox,spot:'',graded:false,co:LS.get('classeur-fr-lastgrader','CCC'),note:'10',label:'',cert:''};
     if (scan.master){ const w=whereFor(c,v0); if(w && !placedIn(w,c,v0)){ form.box=w.box; form.spot=w.spot; } } }
   $('#scrim').hidden=false; $('#sheet').hidden=false;
   priceState = prices[id] && Date.now()-prices[id].t<DAY ? '' : 'loading';
@@ -1436,7 +1437,7 @@ function slotHint(c){
   return `<div class="field full slot-hint"><span class="note">Master set : <b>${esc(w.box)} · page ${w.pos.page} · case ${w.pos.slot}</b> (ligne ${w.pos.row}, colonne ${w.pos.col})</span>${here?'':'<button class="btn small" type="button" data-act="useslot">Utiliser cet emplacement</button>'}</div>`;
 }
 function closeSheet(){ syncPanelOpen=false; openId=null; $('#scrim').hidden=true; $('#sheet').hidden=true; }
-function keepForm(){ const p=$('#price'), b=$('#box'), s=$('#spot'), n=$('#gNote'), ce=$('#gCert'); if(p) form.price=p.value; if(b) form.box=b.value; if(s) form.spot=s.value; if(n) form.note=n.value; if(ce) form.cert=ce.value; }
+function keepForm(){ const p=$('#price'), b=$('#box'), s=$('#spot'), n=$('#gNote'), ce=$('#gCert'); if(p) form.price=p.value; if(b) form.box=b.value; if(s) form.spot=s.value; if(n) form.note=n.value; if(ce) form.cert=ce.value; const gl=$('#gLabel'); form.label = (n&&n.value!=='10') ? '' : (gl?gl.value:form.label||''); }
 function priceBlock(c){
   const p=prices[c.id];
   if (priceState==='loading' && !p) return `<div class="price"><h3>Prix Cardmarket</h3><p class="note">Chargement des ventes…</p></div>`;
@@ -1482,6 +1483,7 @@ function renderSheet(){
       <label class="check full gswitch"><input type="checkbox" id="gOn" ${form.graded?'checked':''}> <b>Carte gradée</b> (en slab)</label>
       ${form.graded?`<div class="field full"><span class="lbl">Gradée par</span><div class="seg" data-f="co">${GRADERS.map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${form.co===k}">${l}</button>`).join('')}</div></div>
       <div class="field"><label for="gNote">Note</label><select id="gNote">${GRADES.map(g=>`<option value="${g}" ${String(form.note)===g?'selected':''}>${g.replace('.',',')}</option>`).join('')}</select></div>
+      ${String(form.note)==='10'?`<div class="field"><label for="gLabel">Étiquette</label><select id="gLabel">${LABELS.map(([k,l])=>`<option value="${k}" ${form.label===k?'selected':''}>${l}</option>`).join('')}</select></div>`:''}
       <div class="field"><label for="gCert">N° de certificat</label><input type="text" id="gCert" inputmode="numeric" autocomplete="off" placeholder="optionnel" value="${esc(form.cert)}"></div>`:''}
       <div class="field full"${form.graded?' hidden':''}><span class="lbl">État</span><div class="seg" data-f="cond">${COND.map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${form.cond===k}" title="${l}">${k}</button>`).join('')}</div>
         <p class="note">${esc(COND.find(x=>x[0]===form.cond)[1])}${cfg.cond&&COEF[form.cond]<1?` · valeur estimée à ${Math.round(COEF[form.cond]*100)} % du prix de référence`:''}</p></div>
@@ -1518,10 +1520,10 @@ $('#shBody').addEventListener('submit', e=>{
   e.preventDefault(); keepForm();
   const c=byId.get(openId), pv=parseFloat(String(form.price).replace(',','.'));
   const data={card:c.id, variant:form.variant, cond:form.cond, qty:form.qty, price:isFinite(pv)&&pv>=0?Math.round(pv*100)/100:null, box:form.box.trim(), spot:form.spot.trim()};
-  if (form.graded){ data.cond='NM'; data.grade={co:form.co, note:String(form.note), cert:String(form.cert||'').trim()}; LS.set('classeur-fr-lastgrader', form.co); }
+  if (form.graded){ data.cond='NM'; data.grade={co:form.co, note:String(form.note), cert:String(form.cert||'').trim()}; if (String(form.note)==='10' && form.label) data.grade.label=form.label; LS.set('classeur-fr-lastgrader', form.co); }
   let id=editing;
   if(!id){
-    const sameGrade=(a,b)=>(!a&&!b)||(a&&b&&a.co===b.co&&String(a.note)===String(b.note)&&!a.cert&&!b.cert);
+    const sameGrade=(a,b)=>(!a&&!b)||(a&&b&&a.co===b.co&&String(a.note)===String(b.note)&&(a.label||'')===(b.label||'')&&!a.cert&&!b.cert);
     const same=[...entries].find(([,x])=>x.card===data.card&&x.variant===data.variant&&x.cond===data.cond&&sameGrade(x.grade,data.grade)&&(x.box||'')===data.box&&(x.spot||'')===data.spot);
     if(same){ id=same[0]; data.qty+=+same[1].qty||0; if(data.price==null) data.price=same[1].price??null; data.added=same[1].added; }
     else id='e'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -1544,7 +1546,7 @@ $('#bkCsv').onclick=()=>{
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const lines=[['Nom','Série','Abréviation','Numéro','Variante','État','Gradée par','Note','Certificat','Quantité','Rangement','Emplacement','Valeur unitaire (€)','Source du prix','Valeur totale (€)'].map(q).join(';')];
   for(const e of entries.values()){ const c=byId.get(e.card); if(!c) continue; const u=unitValue(e);
-    lines.push([c.name,c.set.name,c.set.code||'',numOf(c),vn(e.variant),e.grade?'':e.cond,e.grade?e.grade.co:'',e.grade?String(e.grade.note).replace('.',','):'',e.grade?e.grade.cert||'':'',e.qty,e.box||'',e.spot||'',u.v!=null?u.v.toFixed(2).replace('.',','):'',u.src,u.v!=null?(u.v*e.qty).toFixed(2).replace('.',','):''].map(q).join(';')); }
+    lines.push([c.name,c.set.name,c.set.code||'',numOf(c),vn(e.variant),e.grade?'':e.cond,e.grade?e.grade.co:'',e.grade?String(e.grade.note).replace('.',',')+(e.grade.label?' '+e.grade.label:''):'',e.grade?e.grade.cert||'':'',e.qty,e.box||'',e.spot||'',u.v!=null?u.v.toFixed(2).replace('.',','):'',u.src,u.v!=null?(u.v*e.qty).toFixed(2).replace('.',','):''].map(q).join(';')); }
   download(`classeur-pokemon-${today()}.csv`, '﻿'+lines.join('\r\n'), 'text/csv'); toast('Export tableur téléchargé');
 };
 $('#bkLoad').onclick=()=>$('#bkFile').click();
