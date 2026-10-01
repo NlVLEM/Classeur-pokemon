@@ -515,7 +515,18 @@ const CAT = JSON.parse(document.getElementById('catalog').textContent);
 const CMFIX = CAT.cmfix || {}, CM_KEYS = ['avg','low','trend','avg1','avg7','avg30','avg-holo','low-holo','trend-holo','avg1-holo','avg7-holo','avg30-holo'];
 function fixedCm(id){ const f=CMFIX[id]; if (!f) return undefined; if (!f[0]) return null;
   const o={idProduct:f[0], updated:CAT.built}; (f[1]||[]).forEach((v,i)=>{ if (v!=null) o[CM_KEYS[i]]=v; }); return o; }
-for (const id in CMFIX) if (prices[id]){ prices[id].cm=fixedCm(id); prices[id].vp={}; }
+// prices kept on this device remember which correction they come from (fx), and are reloaded when the correction changes
+const fxOf = id => CMFIX[id] ? CMFIX[id][0] : 0;
+for (const id of Object.keys(prices)){
+  const p=prices[id];
+  if (p.fx===undefined){   // saved by an older version: prices set by a correction carry a date without time
+    const fromFix = !p.cm || (p.cm.updated && !String(p.cm.updated).includes('T'));
+    if (fromFix && !CMFIX[id]){ delete prices[id]; continue; }
+    p.fx = fromFix ? null : 0;
+  }
+  if (p.fx!==fxOf(id)){ if (CMFIX[id]){ p.cm=fixedCm(id); p.vp={}; p.fx=fxOf(id); } else delete prices[id]; }
+}
+LS.set(K.prices, prices);
 let sets = CAT.sets.map((s,i)=>Object.assign(s,{i}));
 let cards = [], byId = new Map(), setById = new Map(sets.map(s=>[s.id,s]));
 function natKey(id){ const m=String(id).match(/^(\D*)(\d+)(.*)$/); return m?[m[1],+m[2],m[3]]:[String(id),0,'']; }
@@ -631,7 +642,7 @@ function fetchPrice(id, force){
     const fx = fixedCm(id), cm = fx!==undefined ? fx : (j.pricing && j.pricing.cardmarket || null);
     const vp = {};
     if (fx===undefined) for (const d of (j.variants_detailed||[])){ const ty=String(d.type||'').toLowerCase(), k=/first|1st|premi/.test(ty)?'1':ty.startsWith('rev')?'r':ty.startsWith('holo')?'h':ty.startsWith('normal')?'n':null; const pid=d.thirdParty&&d.thirdParty.cardmarket || d.pricing&&d.pricing.cardmarket&&d.pricing.cardmarket.idProduct; if(k&&pid&&!vp[k]) vp[k]=pid; }
-    prices[id] = {t:Date.now(), cm, vp, upd: cm&&cm.updated||null};
+    prices[id] = {t:Date.now(), cm, vp, upd: cm&&cm.updated||null, fx: fxOf(id)};
     const c = byId.get(id);
     if (c && c.live){ // enrich cards not in the bundled catalog
       if (j.rarity) c.rar = j.rarity;
